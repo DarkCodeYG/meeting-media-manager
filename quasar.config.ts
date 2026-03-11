@@ -4,6 +4,9 @@
 import { defineConfig } from '@quasar/app-vite/wrappers';
 import { sentryEsbuildPlugin } from '@sentry/esbuild-plugin';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
+import { spawnSync } from 'node:child_process';
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { mergeConfig } from 'vite'; // use mergeConfig helper to avoid overwriting the default config
@@ -152,13 +155,11 @@ export default defineConfig((ctx) => {
           hardenedRuntime: true,
           icon: getIconPath('icns'),
           minimumSystemVersion: '10.15',
-          target: { 
+          target: {
+            arch: ['universal'],
             target: 'default',
-            arch: [
-              "universal",
-            ],
           },
-          x64ArchFiles: "**/@napi-rs/**",
+          x64ArchFiles: '**/@napi-rs/**',
         },
         nsis: {
           deleteAppDataOnUninstall: true,
@@ -182,7 +183,78 @@ export default defineConfig((ctx) => {
         },
       },
       bundler: 'builder', // 'packager' or 'builder'
+      // Workaround: quasar runs yarn in dist/electron/UnPackaged which
+      // has its own yarn.lock, making yarn treat it as project root and fail to find
+      // patches in .yarn/patches/. Copy them before packaging.
+      ...{
+        beforePackaging: ({ unpackagedDir }: { unpackagedDir: string }) => {
+          const projectRoot = join(fileURLToPath(import.meta.url), '..');
+          const patchSrc = join(projectRoot, '.yarn', 'patches');
+          const patchDst = join(unpackagedDir, '.yarn', 'patches');
+          const releaseSrc = join(projectRoot, '.yarn', 'releases');
+          const releaseDst = join(unpackagedDir, '.yarn', 'releases');
+
+          mkdirSync(patchDst, { recursive: true });
+          mkdirSync(releaseDst, { recursive: true });
+
+          if (existsSync(patchSrc))
+            cpSync(patchSrc, patchDst, { recursive: true });
+          cpSync(releaseSrc, releaseDst, { recursive: true });
+
+          writeFileSync(
+            join(unpackagedDir, '.yarnrc.yml'),
+            'nodeLinker: node-modules\nyarnPath: .yarn/releases/yarn-4.12.0.cjs\n',
+          );
+
+          const yarnBin = join(releaseDst, 'yarn-4.12.0.cjs');
+          const result = spawnSync(
+            process.execPath,
+            [yarnBin, 'workspaces', 'focus', '--all', '--production'],
+            {
+              cwd: unpackagedDir,
+              env: { ...process.env, NODE_ENV: 'production' },
+              stdio: 'inherit',
+            },
+          );
+          if (result.status !== 0)
+            throw new Error('yarn workspaces focus failed in beforePackaging');
+        },
+        unPackagedInstallParams: ['--version'], // skip default install; we do it in beforePackaging
+      },
       extendElectronMainConf: (esbuildConf) => {
+        // Output as CJS to avoid Node.js 22.19.0 ESM/CJS interop bug
+        // (cjsPreparseModuleExports crashes when importing built-in CJS modules like 'electron' via ESM)
+        // CJS format lets require('electron') use Electron's native module interception directly.
+        esbuildConf.format = 'cjs';
+
+        // Fix import.meta.url for CJS output (a few source files use it to resolve __dirname).
+        // banner injects the variable at module top-level; define replaces import.meta.url with it.
+        esbuildConf.banner = {
+          js: 'var __importMetaUrl = require("url").pathToFileURL(__filename).href;',
+        };
+        esbuildConf.define = {
+          ...esbuildConf.define,
+          'import.meta.url': '__importMetaUrl',
+        };
+
+        // Write {"type":"commonjs"} to output dir so Node.js treats .js files as CJS
+        // (root package.json has "type":"module" which would otherwise override this)
+        esbuildConf.plugins ??= [];
+        esbuildConf.plugins.push({
+          name: 'write-cjs-package-json',
+          setup(build) {
+            build.onEnd(() => {
+              const outdir = build.initialOptions.outdir;
+              if (outdir) {
+                writeFileSync(
+                  join(outdir, 'package.json'),
+                  '{"type":"commonjs"}\n',
+                );
+              }
+            });
+          },
+        });
+
         if (ctx.prod && !ctx.debug && ENABLE_SOURCE_MAPS) {
           esbuildConf.sourcemap = true;
           esbuildConf.plugins ??= [];
@@ -198,6 +270,8 @@ export default defineConfig((ctx) => {
         }
       },
       extendElectronPreloadConf: (esbuildConf) => {
+        esbuildConf.format = 'cjs';
+
         if (ctx.prod && !ctx.debug && ENABLE_SOURCE_MAPS) {
           esbuildConf.sourcemap = true;
           esbuildConf.plugins ??= [];
@@ -213,6 +287,9 @@ export default defineConfig((ctx) => {
         }
       },
       extendPackageJson(pkg) {
+        // Main and preload are bundled as CJS; remove "type": "module" so Node.js treats .js as CJS
+        delete pkg.type;
+
         // All dependencies required by the main and preload scripts need to be listed here
         const electronDeps = new Set([
           '@jitsi/robotjs',

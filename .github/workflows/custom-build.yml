@@ -1,0 +1,48 @@
+name: Custom Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.19.0
+          cache: 'yarn'
+
+      - name: Install X11 development libraries (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxtst-dev libxinerama-dev libx11-xcb-dev libxkbcommon-x11-dev libxss-dev libpng-dev libpng++-dev
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build Electron App
+        run: |
+          yarn generate:icons
+          yarn generate:logos
+          yarn build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TEST_VERSION: 'true'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: M3-custom-${{ matrix.os == 'macos-latest' && 'macOS' || matrix.os == 'windows-latest' && 'Windows' || 'Linux' }}
+          path: |
+            dist/electron/Packaged/*.exe
+            dist/electron/Packaged/*.dmg
+            dist/electron/Packaged/*.zip
+            dist/electron/Packaged/*.AppImage

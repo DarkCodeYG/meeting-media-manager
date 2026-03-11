@@ -1,0 +1,60 @@
+diff --git a/main/normalize.js b/main/normalize.js
+index 0027b9124e8ebeee7c4edf04c4f18a514ca7d728..4c51f72cb3659483619ef27446977539ff8f8e3c 100644
+--- a/main/normalize.js
++++ b/main/normalize.js
+@@ -3,7 +3,13 @@ const node = require('@sentry/node');
+ const electron = require('electron');
+ const version = require('./version.js');
+ 
+-const getModuleFromFilename = node.createGetModuleFromFilename(electron.app.getAppPath());
++let _getModuleFromFilename;
++const getModuleFromFilename = (...args) => {
++  if (!_getModuleFromFilename) {
++    _getModuleFromFilename = node.createGetModuleFromFilename(electron.app.getAppPath());
++  }
++  return _getModuleFromFilename(...args);
++};
+ /**
+  * Normalizes all URLs in an event. See {@link normalizeUrl} for more
+  * information. Mutates the passed in event.
+diff --git a/main/stack-parse.js b/main/stack-parse.js
+index e76d8579b0d6891eae85963f03707077f111fa93..f2f0e77fbf6007401ed4a06c344f9b4d7ac96157 100644
+--- a/main/stack-parse.js
++++ b/main/stack-parse.js
+@@ -5,7 +5,14 @@ const stackParse = require('../renderer/stack-parse.js');
+ const electronNormalize = require('./electron-normalize.js');
+ 
+ // node.js stack parser but filename normalized before parsing the module
+-const defaultStackParser = core.createStackParser(core.nodeStackLineParser(node.createGetModuleFromFilename(electron.app.getAppPath())));
++let _defaultStackParser;
++const getDefaultStackParser = () => {
++  if (!_defaultStackParser) {
++    _defaultStackParser = core.createStackParser(core.nodeStackLineParser(node.createGetModuleFromFilename(electron.app.getAppPath())));
++  }
++  return _defaultStackParser;
++};
++const defaultStackParser = (...args) => getDefaultStackParser()(...args);
+ /**
+  * Captures stack frames from a renderer process
+  *
+diff --git a/package.json b/package.json
+index 2a4eede60574dcc859049d6e97a1f140a052b10d..db497b12a245e61945dae3b276e15a07e2dc0ae5 100644
+--- a/package.json
++++ b/package.json
+@@ -14,14 +14,8 @@
+       "default": "./esm/renderer/index.js"
+     },
+     "./main": {
+-      "require": {
+-        "types": "./main/index.d.ts",
+-        "default": "./main/index.js"
+-      },
+-      "import": {
+-        "types": "./esm/main/index.d.ts",
+-        "default": "./esm/main/index.js"
+-      }
++      "types": "./main/index.d.ts",
++      "default": "./main/index.js"
+     },
+     "./renderer": {
+       "require": {
