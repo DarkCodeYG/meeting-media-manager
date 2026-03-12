@@ -348,7 +348,11 @@
       currentSettings.enablePinyinSongs = !currentSettings.enablePinyinSongs
     "
   >
-    <q-icon :class="{ 'q-mr-sm': $q.screen.gt.md }" name="mmm-cjk" size="xs" />
+    <span
+      :class="{ 'q-mr-sm': $q.screen.gt.md }"
+      style="font-weight: bold; font-size: 14px"
+      >拼</span
+    >
     {{ $q.screen.gt.md ? t('enablePinyinSongs') : '' }}
     <q-tooltip v-if="!$q.screen.gt.md" :delay="1000">
       {{ t('enablePinyinSongs') }}
