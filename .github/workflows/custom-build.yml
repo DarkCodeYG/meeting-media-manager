@@ -35,7 +35,7 @@ jobs:
           yarn build
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          TEST_VERSION: 'true'
+          TEST_VERSION: 'false'
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
