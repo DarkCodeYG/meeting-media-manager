@@ -1146,10 +1146,20 @@ onMounted(() => {
   );
 
   useEventListener(globalThis, 'pinyin-songs-toggled', () => {
-    // Clear mediaSections and reset status to force full re-fetch
+    // Clear only standard section items and reset status to force re-fetch,
+    // preserving custom/imported sections, user-added media, and config data
     const days = lookupPeriod.value?.[currentCongregation.value] ?? [];
     days.forEach((day) => {
-      day.mediaSections = [];
+      day.mediaSections.forEach((s) => {
+        if (
+          s.config.uniqueId !== 'imported-media' &&
+          !s.config.uniqueId.startsWith('custom-')
+        ) {
+          // Keep user-added items, clear fetched items
+          s.items =
+            s.items?.filter((item) => item.source === 'additional') ?? [];
+        }
+      });
       day.status = null;
     });
     fetchMedia();

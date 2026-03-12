@@ -361,7 +361,7 @@ async function playMusic() {
       // Meeting day: optimize queue to end precisely at fadeout time
       const selectedDayMedia = Object.values(
         selectedDateObject.value?.mediaSections ?? {},
-      ).flatMap((section) => section.items || []);
+      ).flatMap((section) => structuredClone(section.items || []));
 
       const { queue, startOffsetSeconds } = await prepareMeetingDaySongQueue(
         enrichedSongs,

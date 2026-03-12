@@ -14,7 +14,7 @@
   "author": "Olivier Savignac",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sircharlo/meeting-media-manager.git"
+    "url": "https://github.com/DarkCodeYG/meeting-media-manager.git"
   },
   "scripts": {
     "electron-rebuild": "./node_modules/.bin/electron-rebuild.cmd -f -m ./node_modules/better-sqlite3 && ./node_modules/.bin/electron-rebuild.cmd -f -m ./node_modules/@jitsi/robotjs",
