@@ -36,6 +36,7 @@ import type { MediaSectionWithConfig } from 'src/types';
 
 import { storeToRefs } from 'pinia';
 import { locales } from 'src/constants/locales';
+import { toggleMediaWindowVisibility } from 'src/helpers/mediaPlayback';
 import { isAudio, isVideo } from 'src/utils/media';
 import { useCurrentStateStore } from 'stores/current-state';
 import { computed, ref, watch } from 'vue';
@@ -103,6 +104,10 @@ const togglePlay = () => {
   }
 
   isPlaying.value = !isPlaying.value;
+
+  if (isPlaying.value) {
+    toggleMediaWindowVisibility(true);
+  }
 
   globalThis.dispatchEvent(
     new CustomEvent('public-talk-title', {
