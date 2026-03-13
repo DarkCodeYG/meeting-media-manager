@@ -153,6 +153,7 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Install Apple certificate
+        continue-on-error: true
         if: runner.os == 'macOS' && github.actor != 'dependabot[bot]'
         env:
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
