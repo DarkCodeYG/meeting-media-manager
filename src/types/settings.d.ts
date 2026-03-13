@@ -216,6 +216,7 @@ export interface SettingsValues {
   enablePinyinSongs: boolean;
   enablePlaybackSpeedControl: boolean;
   enablePreMeetingClock: boolean;
+  enablePublicTalkTitle: boolean;
   enableSubtitles: boolean;
   excludeFootnotes: boolean;
   excludeTh: boolean;

@@ -28,9 +28,14 @@
       @update-color="updateSectionColor"
       @update-label="updateSectionLabel"
     />
-    <!-- Public Talk Title Card -->
+    <!-- Talk Title Card -->
     <PublicTalkTitleCard
-      v-if="mediaList.config?.uniqueId === 'pt'"
+      v-if="
+        currentSettings?.enablePublicTalkTitle &&
+        (mediaList.config?.uniqueId === 'pt' ||
+          mediaList.config?.uniqueId === 'circuit-overseer')
+      "
+      :is-public-talk="mediaList.config?.uniqueId === 'pt'"
       :media-list="mediaList"
       @update-talk-title="updateTalkTitle"
     />
@@ -162,7 +167,7 @@ const props = defineProps<{
 }>();
 
 const currentState = useCurrentStateStore();
-const { selectedDateObject } = storeToRefs(currentState);
+const { currentSettings, selectedDateObject } = storeToRefs(currentState);
 
 // Ref to the section header
 const sectionHeaderRef = ref<InstanceType<typeof MediaSectionHeader> | null>(

@@ -1282,7 +1282,17 @@ const handlePublicTalkTitle = (e: Event) => {
     postYeartext(html);
   } else {
     yeartextWatcherPaused.value = false;
-    postYeartext(yeartext.value);
+    if (mediaPlaying.value.url) {
+      // Another media is about to play - delay yeartext restoration
+      // until the display layer has faded in over the base layer
+      setTimeout(() => {
+        if (!yeartextWatcherPaused.value) {
+          postYeartext(yeartext.value);
+        }
+      }, 400);
+    } else {
+      postYeartext(yeartext.value);
+    }
   }
 };
 

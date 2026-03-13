@@ -5,7 +5,7 @@
         v-model="talkTitle"
         autogrow
         dense
-        :label="t('public-talk-title')"
+        :label="t(isPublicTalk ? 'public-talk-title' : 'talk-title')"
         outlined
         style="max-width: calc(100% - 16px)"
         type="textarea"
@@ -39,10 +39,11 @@ import { locales } from 'src/constants/locales';
 import { toggleMediaWindowVisibility } from 'src/helpers/mediaPlayback';
 import { isAudio, isVideo } from 'src/utils/media';
 import { useCurrentStateStore } from 'stores/current-state';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
+  isPublicTalk?: boolean;
   mediaList: MediaSectionWithConfig;
 }>();
 
@@ -79,12 +80,19 @@ const stopTitleDisplay = () => {
 };
 
 const buildHtml = () => {
-  const lang = currentSettings.value?.lang;
-  const locale = locales.find((l) => l.langcode === lang)?.value;
-  const subtitle = locale ? t('public-talk', {}, { locale }) : t('public-talk');
   const title = escapeHtml(talkTitle.value.trim()).replace(/\n/g, '<br>');
-  return `<p class="pt-subtitle">${subtitle}</p><p class="pt-title">${title}</p>`;
+  if (props.isPublicTalk) {
+    const lang = currentSettings.value?.lang;
+    const locale = locales.find((l) => l.langcode === lang)?.value;
+    const subtitle = locale
+      ? t('public-talk', {}, { locale })
+      : t('public-talk');
+    return `<p class="pt-subtitle">${subtitle}</p><p class="pt-title">${title}</p>`;
+  }
+  return `<p class="pt-title">${title}</p>`;
 };
+
+const sectionId = props.mediaList.config?.uniqueId;
 
 const togglePlay = () => {
   if (!talkTitle.value?.trim()) return;
@@ -106,6 +114,10 @@ const togglePlay = () => {
   isPlaying.value = !isPlaying.value;
 
   if (isPlaying.value) {
+    // Stop other talk title cards before playing
+    globalThis.dispatchEvent(
+      new CustomEvent('stop-talk-title', { detail: { except: sectionId } }),
+    );
     toggleMediaWindowVisibility(true);
   }
 
@@ -115,6 +127,22 @@ const togglePlay = () => {
     }),
   );
 };
+
+// Listen for stop signal from other talk title cards
+const handleStopTalkTitle = (e: Event) => {
+  const exceptId = (e as CustomEvent).detail?.except;
+  if (exceptId !== sectionId && isPlaying.value) {
+    isPlaying.value = false;
+  }
+};
+
+onMounted(() => {
+  globalThis.addEventListener('stop-talk-title', handleStopTalkTitle);
+});
+
+onBeforeUnmount(() => {
+  globalThis.removeEventListener('stop-talk-title', handleStopTalkTitle);
+});
 
 // Persist talk title to section config via emit
 watch(talkTitle, (val) => {
