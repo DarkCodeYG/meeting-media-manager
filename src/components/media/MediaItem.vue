@@ -645,50 +645,6 @@
                 }}
               </q-tooltip>
             </q-btn>
-            <template
-              v-if="
-                isCurrentlyPlaying &&
-                (media.isVideo || media.isAudio) &&
-                mediaPlaying.action
-              "
-            >
-              <q-btn
-                class="q-mr-xs"
-                color="grey-7"
-                dense
-                :disable="playbackRate <= 0.5"
-                icon="mmm-remove"
-                outline
-                rounded
-                size="sm"
-                @click="changePlaybackRate(-0.1)"
-              >
-                <q-tooltip :delay="1000">
-                  {{ t('decrease-playback-speed') }}
-                </q-tooltip>
-              </q-btn>
-              <span
-                class="text-caption text-weight-bold q-mx-xs"
-                style="min-width: 36px; text-align: center; user-select: none"
-              >
-                x{{ playbackRate.toFixed(1) }}
-              </span>
-              <q-btn
-                class="q-mr-sm"
-                color="grey-7"
-                dense
-                :disable="playbackRate >= 2.0"
-                icon="mmm-plus"
-                outline
-                rounded
-                size="sm"
-                @click="changePlaybackRate(0.1)"
-              >
-                <q-tooltip :delay="1000">
-                  {{ t('increase-playback-speed') }}
-                </q-tooltip>
-              </q-btn>
-            </template>
             <q-btn
               v-if="mediaPlaying.action === 'pause'"
               ref="pauseResumeButton"
@@ -860,6 +816,52 @@
                       : t('repeat-media-item-explain')
                   }}
                 </q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-item
+              v-if="
+                currentSettings?.enablePlaybackSpeedControl &&
+                isCurrentlyPlaying &&
+                (media.isVideo || media.isAudio) &&
+                mediaPlaying.action
+              "
+              clickable
+            >
+              <q-item-section avatar>
+                <q-icon name="mmm-media-settings" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ t('playback-speed') }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <div class="row items-center no-wrap">
+                  <q-btn
+                    color="grey-7"
+                    dense
+                    :disable="playbackRate <= 0.5"
+                    flat
+                    icon="mmm-remove"
+                    round
+                    size="sm"
+                    @click.stop="changePlaybackRate(-0.1)"
+                  />
+                  <span
+                    class="text-caption text-weight-bold"
+                    style="min-width: 36px; text-align: center"
+                  >
+                    x{{ playbackRate.toFixed(1) }}
+                  </span>
+                  <q-btn
+                    color="grey-7"
+                    dense
+                    :disable="playbackRate >= 5.0"
+                    flat
+                    icon="mmm-plus"
+                    round
+                    size="sm"
+                    @click.stop="changePlaybackRate(0.1)"
+                  />
+                </div>
               </q-item-section>
             </q-item>
             <q-item
@@ -1685,7 +1687,7 @@ const playbackRate = ref(1);
 
 const changePlaybackRate = (delta: number) => {
   const newRate = Math.round((playbackRate.value + delta) * 10) / 10;
-  playbackRate.value = Math.min(2.0, Math.max(0.5, newRate));
+  playbackRate.value = Math.min(5.0, Math.max(0.5, newRate));
   postPlaybackRate(playbackRate.value);
 };
 
@@ -1737,6 +1739,13 @@ const isCurrentlyPlaying = computed(() => {
       mediaPlaying.value.url === props.media.streamUrl) &&
     mediaPlaying.value.uniqueId === props.media.uniqueId
   );
+});
+
+watch(isCurrentlyPlaying, (playing) => {
+  if (!playing && playbackRate.value !== 1) {
+    playbackRate.value = 1;
+    postPlaybackRate(1);
+  }
 });
 
 const mediaPan = ref<{ x: number; y: number }>({
