@@ -201,7 +201,7 @@ const {
 } = useMediaSection(props.mediaList);
 
 const updateTalkTitle = (title: string) => {
-  if (sectionData.value.config) {
+  if (sectionData.value?.config) {
     sectionData.value.config.publicTalkTitle = title;
   }
 };

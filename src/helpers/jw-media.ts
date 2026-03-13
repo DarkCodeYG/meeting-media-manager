@@ -2896,20 +2896,15 @@ export const downloadAdditionalRemoteVideo = async (
         `sjjm_s-Pi_CHS_${trackNum}_r720P.mp4`,
       );
       if (await pathExists(pinyinPath)) {
-        return addToAdditionMediaMapFromPath(
-          pinyinPath,
-          section,
-          undefined,
-          {
-            song: song.toString(),
-            title,
-            url: bestItemUrl,
-          },
-        );
+        return addToAdditionMediaMapFromPath(pinyinPath, section, undefined, {
+          song: song.toString(),
+          title,
+          url: bestItemUrl,
+        });
       }
     }
 
-    if (!bestItemUrl) return undefined;
+    if (!bestItem || !bestItemUrl) return undefined;
 
     const datedAdditionalMediaDir =
       await currentStateStore.getDatedAdditionalMediaDirectory();
