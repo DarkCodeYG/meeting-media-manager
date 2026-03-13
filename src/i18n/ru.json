@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Отображать изображения и видео в окне или на внешнем экране. При использовании в Зале Царства этот параметр в большинстве случаев должен быть включен.",
   "enableMediaWindowFadeTransitions": "Включить плавный переход при скрытии или отображении окна мультимедиа",
   "enableMediaWindowFadeTransitions-explain": "При включении этой функции, окно мультимедиа будет плавно появляться и исчезать, а не мгновенно. Это обеспечивает более приятный визуальный эффект.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Включить воспроизведение фоновой музыки",
   "enableMusicButton-explain": "Воспроизводите песни до и после встреч всего несколькими щелчками мыши.",
   "enablePinyinSongs": "Предпочитайте тексты pinyin",

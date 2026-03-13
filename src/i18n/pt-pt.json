@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Exibir imagens e vídeos numa janela ou num ecrã externo. Se for utilizado num Salão do Reino, esta opção deve ser ativada na maioria dos casos.",
   "enableMediaWindowFadeTransitions": "Ativar transição de desvanecimento ao ocultar ou mostrar a janela de multimédia",
   "enableMediaWindowFadeTransitions-explain": "Quando ativado, a janela de multimédia desvanecer-se-á suavemente ao aparecer e desaparecer, em vez de surgir/desaparecer instantaneamente. Isto proporciona uma experiência visual mais refinada.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Permitir reprodução de música de fundo",
   "enableMusicButton-explain": "Reproduzir músicas antes e depois das reuniões com apenas alguns cliques.",
   "enablePinyinSongs": "Preferir músicas do pinyin",

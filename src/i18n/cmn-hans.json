@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "在窗口或外部屏幕上显示图像和视频。如果在王国聚会所使用，这在大多数情况下都应该启用。",
   "enableMediaWindowFadeTransitions": "当隐藏或显示媒体窗口时启用淡入淡出过渡",
   "enableMediaWindowFadeTransitions-explain": "如果启用，媒体窗口将会平滑地进出，而不是立即出现/消失。这将提供一个更细致的视觉体验。",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "启用背景音乐播放",
   "enableMusicButton-explain": "只需几次点击，可在聚会前会后只播放歌曲。",
   "enablePinyinSongs": "优先使用拼音歌曲",

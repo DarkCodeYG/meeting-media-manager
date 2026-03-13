@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Piltide ja videote kuvamine aknas või teisel ekraanil. Kuningriigisaalis kasutamise korral peaks see funktsioon enamasti olema lubatud.",
   "enableMediaWindowFadeTransitions": "Luba üleminekuga varjamine või näitamine meediaaknas",
   "enableMediaWindowFadeTransitions-explain": "Kui see on aktiveeritud, siis meediaaken ilmub ja kaob sujuvalt, mitte aga hetkega. See tagab sõbralikuma visuaalse elamuse.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Luba taustamuusika esitamine",
   "enableMusicButton-explain": "Luba esitada taustamuusikat enne ja pärast koosolekut ainult mõne hiireklikiga.",
   "enablePinyinSongs": "Prefer pinyin songs",

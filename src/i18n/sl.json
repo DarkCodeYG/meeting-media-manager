@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Slike in videoposnetke prikaži v oknu ali na zunanjem zaslonu. Pri uporabi v kraljestveni dvorani mora biti ta možnost v večini primerov omogočena.",
   "enableMediaWindowFadeTransitions": "Omogoči prehod s prelivanjem, ko želiš skriti ali prikazati okno multimedijske vsebine",
   "enableMediaWindowFadeTransitions-explain": "Ko je ta možnost omogočena, se multimedijsko okno postopoma pojavi in izgine, namesto da se pojavi/izgine brez prehoda. To zagotavlja bolj prijetno vizualno izkušnjo.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Omogoči predvajanje glasbe v ozadju",
   "enableMusicButton-explain": "Z le nekaj kliki omogoči predvajanje glasbe pred shodi in po njih.",
   "enablePinyinSongs": "Daj prednost pesmim v pinjinu",

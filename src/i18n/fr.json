@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Afficher les images et les vidéos dans une fenêtre ou sur un écran externe. Si vous utilisez M³ dans une salle du Royaume, cette option devrait être activée dans la plupart des cas.",
   "enableMediaWindowFadeTransitions": "Activer la transition en fondu lors du masquage ou de l'affichage de la fenêtre des médias",
   "enableMediaWindowFadeTransitions-explain": "Lorsque activé, la fenêtre des médias se cachera et apparaîtra en douceur au lieu d'instantanément. Cela offre une expérience visuelle plus raffinée.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Activer la fonction de musique de fond",
   "enableMusicButton-explain": "Jouez des cantiques avant et après les réunions en quelques clics.",
   "enablePinyinSongs": "Préférer les cantiques en pinyin",

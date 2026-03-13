@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Onyesha picha na video kwa kisehemu au kwenye televisheni. Ikiwa unaitumia kwenye Jumba La Ufalme, inafaa kuwashwa kwa visa vyote.",
   "enableMediaWindowFadeTransitions": "Enable fade transition when hiding or showing the media window",
   "enableMediaWindowFadeTransitions-explain": "When enabled, the media window will smoothly fade in and out instead of appearing/disappearing instantly. This provides a more polished visual experience.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Washa uchezaji wa muziki wa usuli",
   "enableMusicButton-explain": "Cheza muziki kabla na baada ya mikutano kwa kubofya kitufe tu.",
   "enablePinyinSongs": "Prefer pinyin songs",

@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Näytä kuvia ja videoita ikkunassa tai ulkoisella näytöllä. Jos käytät sovellusta Valtakunnansalissa, tämä asetus tulisi useimmissa tapauksissa pitää käytössä.",
   "enableMediaWindowFadeTransitions": "Ota käyttöön häivytyssiirtymä mediaikkunassa",
   "enableMediaWindowFadeTransitions-explain": "Kun tämä asetus on käytössä, mediaikkuna häivyy näkyviin ja pois pehmeästi sen sijaan, että se ilmestyisi tai katoaisi äkisti. Tämä luo viimeistellymmän visuaalisen kokemuksen.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Ota taustamusiikin toisto käyttöön",
   "enableMusicButton-explain": "Toista lauluja ennen ja jälkeen kokouksen vain muutamalla napsautuksella.",
   "enablePinyinSongs": "Suosi pinyin-kappaleita",

@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Visa bilder och videor i ett fönster eller på en extern skärm. Om du använder dem i Rikets sal, bör detta i de flesta fall vara aktiverat.",
   "enableMediaWindowFadeTransitions": "Aktivera mjuk övergång när du döljer eller visar mediafönstret",
   "enableMediaWindowFadeTransitions-explain": "När det är aktiverat kommer mediafönstret att tona in och ut istället för att visas/försvinna direkt. Detta ger en trevlig visuell upplevelse.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Aktivera uppspelning av bakgrundsmusik",
   "enableMusicButton-explain": "Spela sånger före och efter mötena med bara några klick.",
   "enablePinyinSongs": "Föredrar pinyin-sånger",

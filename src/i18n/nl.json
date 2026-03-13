@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Afbeeldingen en video's weergeven in een venster of op een extern scherm. Indien het gebruik in een koninkrijkszaal wordt gebruikt, zou dit in de meeste gevallen ingeschakeld moeten zijn.",
   "enableMediaWindowFadeTransitions": "Fade-overgang inschakelen bij het verbergen of tonen van het mediavenster",
   "enableMediaWindowFadeTransitions-explain": "Wanneer ingeschakeld, zal het mediavenster soepel in- en uitfaden in plaats van direct te verschijnen of te verdwijnen. Dit zorgt voor een meer verzorgde visuele ervaring.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Afspelen van achtergrondmuziek inschakelen",
   "enableMusicButton-explain": "Speel met slechts een paar klikken liederen voor en na de vergaderingen af.",
   "enablePinyinSongs": "Voorkeur voor pinyin nummers",

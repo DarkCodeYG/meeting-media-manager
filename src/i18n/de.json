@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Bilder und Videos in einem Fenster oder auf einem externen Bildschirm anzeigen. Bei Nutzung im Königreichssaal sollte dies in den meisten Fällen aktiviert sein.",
   "enableMediaWindowFadeTransitions": "Ausblenden-Übergang beim Ausblenden oder Anzeigen des Medienfensters aktivieren",
   "enableMediaWindowFadeTransitions-explain": "Wenn aktiviert, wird das Medienfenster glatt ein- und ausblenden, anstatt sofort zu erscheinen/verschwinden. Dies bietet eine noch poliertere visuelle Erfahrung.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Hintergrundmusikwiedergabe aktivieren",
   "enableMusicButton-explain": "Lieder vor und nach den Zusammenkünften mit wenigen Klicks abspielen.",
   "enablePinyinSongs": "Pinyin Lieder bevorzugen",

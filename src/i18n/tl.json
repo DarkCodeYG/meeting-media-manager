@@ -169,6 +169,8 @@
   "enableMediaDisplayButton-explain": "Ipakita ang mga larawan at video sa isang window o sa ibang monitor. Kung gagamitin sa Kingdom Hall, dapat na naka-enable palagi.",
   "enableMediaWindowFadeTransitions": "Enable fade transition when hiding or showing the media window",
   "enableMediaWindowFadeTransitions-explain": "When enabled, the media window will smoothly fade in and out instead of appearing/disappearing instantly. This provides a more polished visual experience.",
+  "enablePreMeetingClock": "Show current time before meeting starts",
+  "enablePreMeetingClock-explain": "When enabled, the current time will be displayed below the yeartext on the media window starting 5 minutes before the meeting begins.",
   "enableMusicButton": "Enable background music playback",
   "enableMusicButton-explain": "Mag-play ng awit bago at pagkatapos ng pulong sa ilang click lamang.",
   "enablePinyinSongs": "Prefer pinyin songs",
