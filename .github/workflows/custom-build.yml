@@ -77,6 +77,8 @@ jobs:
           draft: false
           prerelease: false
           allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
           removeArtifacts: true
           artifacts: "artifacts/**/*.exe,artifacts/**/*.dmg,artifacts/**/*.zip,artifacts/**/*.AppImage,artifacts/**/*.blockmap,artifacts/**/*.yml"
           body: |
