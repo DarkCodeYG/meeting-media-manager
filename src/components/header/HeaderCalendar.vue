@@ -339,20 +339,20 @@
 
   <!-- Pinyin songs toggle -->
   <q-btn
-    v-if="currentSettings?.lang === 'CHS' && currentSettings?.pinyinSongFolder"
-    :color="
-      currentSettings?.enablePinyinSongs ? 'white-transparent' : 'primary'
+    v-if="
+      currentSettings?.lang === 'CHS' &&
+      currentSettings?.enablePinyinSongs &&
+      currentSettings?.pinyinSongFolder
     "
+    :color="currentState.pinyinActive ? 'white-transparent' : 'primary'"
     unelevated
-    @click="
-      currentSettings.enablePinyinSongs = !currentSettings.enablePinyinSongs
-    "
+    @click="currentState.pinyinActive = !currentState.pinyinActive"
   >
-    <span
+    <q-icon
       :class="{ 'q-mr-sm': $q.screen.gt.md }"
-      style="font-weight: bold; font-size: 14px"
-      >拼</span
-    >
+      name="mmm-pinyin"
+      size="xs"
+    />
     {{ $q.screen.gt.md ? t('enablePinyinSongs') : '' }}
     <q-tooltip v-if="!$q.screen.gt.md" :delay="1000">
       {{ t('enablePinyinSongs') }}

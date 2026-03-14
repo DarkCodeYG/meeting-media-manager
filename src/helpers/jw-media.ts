@@ -1579,7 +1579,8 @@ export const dynamicMediaMapper = async (
   lookupDate: Date,
   source: 'additional' | 'dynamic' | 'playlist' | 'watched',
 ): Promise<MediaItem[]> => {
-  const { currentSettings } = useCurrentStateStore();
+  const currentStateStore = useCurrentStateStore();
+  const { currentSettings } = currentStateStore;
 
   try {
     const calculatedSource = source === 'playlist' ? 'additional' : source;
@@ -1667,6 +1668,7 @@ export const dynamicMediaMapper = async (
           m.Track &&
           currentSettings?.lang === 'CHS' &&
           currentSettings?.enablePinyinSongs &&
+          currentStateStore.pinyinActive &&
           currentSettings?.pinyinSongFolder
         ) {
           const trackNum = String(m.Track).padStart(3, '0');
@@ -2888,6 +2890,7 @@ export const downloadAdditionalRemoteVideo = async (
       song &&
       currentSettings?.lang === 'CHS' &&
       currentSettings?.enablePinyinSongs &&
+      currentStateStore.pinyinActive &&
       currentSettings?.pinyinSongFolder
     ) {
       const trackNum = String(song).padStart(3, '0');
