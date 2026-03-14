@@ -46,6 +46,8 @@ jobs:
             dist/electron/Packaged/*.dmg
             dist/electron/Packaged/*.zip
             dist/electron/Packaged/*.AppImage
+            dist/electron/Packaged/*.blockmap
+            dist/electron/Packaged/*.yml
 
   release:
     name: Create Release
@@ -76,7 +78,7 @@ jobs:
           prerelease: false
           allowUpdates: true
           removeArtifacts: true
-          artifacts: "artifacts/**/*.exe,artifacts/**/*.dmg,artifacts/**/*.zip,artifacts/**/*.AppImage"
+          artifacts: "artifacts/**/*.exe,artifacts/**/*.dmg,artifacts/**/*.zip,artifacts/**/*.AppImage,artifacts/**/*.blockmap,artifacts/**/*.yml"
           body: |
             ## Custom Build v${{ steps.version.outputs.version }}
 
