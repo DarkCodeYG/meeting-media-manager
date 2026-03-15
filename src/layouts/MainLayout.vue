@@ -1113,6 +1113,10 @@ const { post: postYeartext } = useBroadcastChannel<
   name: 'yeartext',
 });
 
+const { post: postCurrentLang } = useBroadcastChannel<string, string>({
+  name: 'current-lang',
+});
+
 // Function to check if we should show the yeartext preview notification
 const checkYeartextPreview = async () => {
   try {
@@ -1274,6 +1278,13 @@ watchImmediate(
   },
 );
 
+watchImmediate(
+  () => currentSettings.value?.lang,
+  (lang) => {
+    if (lang) postCurrentLang(lang);
+  },
+);
+
 // Listen for public talk title display events
 const handlePublicTalkTitle = (e: Event) => {
   const html = (e as CustomEvent).detail?.html;
@@ -1345,6 +1356,9 @@ watchImmediate(
     });
     postOnline(online.value);
     postHideMediaLogo(currentSettings.value?.hideMediaLogo);
+    if (currentSettings.value?.lang) {
+      postCurrentLang(currentSettings.value.lang);
+    }
     checkPreMeetingClock();
     if (!yeartextWatcherPaused.value) {
       postYeartext(yeartext.value);

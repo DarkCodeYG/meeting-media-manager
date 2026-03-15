@@ -21,7 +21,11 @@
       }"
     >
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <div id="yeartext" class="center" v-html="sanitize(yeartext || '')" />
+      <div
+        id="yeartext"
+        :class="['center', { cjk: isCjkLang, ko: isKoLang }]"
+        v-html="sanitize(yeartext || '')"
+      />
       <div v-if="showPreMeetingClock" id="preMeetingClockContainer">
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div id="preMeetingClock" v-html="formattedCurrentTime" />
@@ -174,7 +178,11 @@ import {
 import DOMPurify from 'dompurify';
 import { useQuasar } from 'quasar';
 import { errorCatcher } from 'src/helpers/error-catcher';
-import { getJwIconFromKeyword, setElementFont } from 'src/helpers/fonts';
+import {
+  getJwIconFromKeyword,
+  setCjkFont,
+  setElementFont,
+} from 'src/helpers/fonts';
 import { createTemporaryNotification } from 'src/helpers/notifications';
 import { isAudio, isImage, isVideo } from 'src/utils/media';
 import {
@@ -866,6 +874,16 @@ const { data: yeartext } = useBroadcastChannel<
   name: 'yeartext',
 });
 
+const { data: currentLang } = useBroadcastChannel<string, string>({
+  name: 'current-lang',
+});
+
+const CJK_LANG_CODES = ['CHS', 'CHT', 'KO'];
+const isCjkLang = computed(() =>
+  CJK_LANG_CODES.includes(currentLang.value || ''),
+);
+const isKoLang = computed(() => currentLang.value === 'KO');
+
 const { data: preMeetingClockRemaining } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
 });
@@ -1100,6 +1118,7 @@ const jwIconsFontLoaded = ref(false);
 const loadFonts = async () => {
   try {
     await setElementFont('Wt-ClearText-Bold');
+    await setCjkFont();
   } catch (e) {
     errorCatcher(e, {
       contexts: { fn: { fontName: 'Wt-ClearText-Bold', name: 'loadFonts' } },
