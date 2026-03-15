@@ -1,5 +1,13 @@
 // app global css in SCSS form
 
+@font-face {
+  font-family: 'Orbitron';
+  src: url('../assets/fonts/Orbitron.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 .one-hundred-vh {
   height: 100vh;
 }
@@ -47,14 +55,30 @@
 }
 
 #preMeetingClock {
-  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-family: 'Orbitron', 'Inter Variable', 'Inter', sans-serif;
   color: white;
   font-size: 6vw;
-  font-weight: 300;
-  letter-spacing: 0.05em;
+  font-weight: 400;
   text-align: center;
-  font-variant-numeric: tabular-nums;
   opacity: 0.9;
+
+  .clock-digit {
+    display: inline-block;
+    width: 0.85em;
+    text-align: center;
+  }
+
+  .clock-colon {
+    display: inline-block;
+    width: 0.35em;
+    text-align: center;
+  }
+
+  .clock-period {
+    font-size: 0.5em;
+    vertical-align: middle;
+    margin-left: 0.2em;
+  }
 }
 
 #countdownTimerWrapper {

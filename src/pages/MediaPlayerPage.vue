@@ -20,12 +20,11 @@
         'clock-active': showPreMeetingClock,
       }"
     >
-      <!-- eslint-disable next-line vue/no-v-html -->
+      <!-- eslint-disable-next-line vue/no-v-html -->
       <div id="yeartext" class="center" v-html="sanitize(yeartext || '')" />
       <div v-if="showPreMeetingClock" id="preMeetingClockContainer">
-        <div id="preMeetingClock">
-          {{ formattedCurrentTime }}
-        </div>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div id="preMeetingClock" v-html="formattedCurrentTime" />
         <div id="countdownTimerWrapper">
           <div id="countdownTimer">
             <svg viewBox="0 0 120 120">
@@ -887,7 +886,16 @@ const formattedCurrentTime = computed(() => {
   const h12 = hours % 12 || 12;
   const mm = String(d.getMinutes()).padStart(2, '0');
   const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${String(h12).padStart(2, '0')}:${mm}:${ss} ${period}`;
+  const time = `${String(h12).padStart(2, '0')}:${mm}:${ss}`;
+  const digits = time
+    .split('')
+    .map((ch) =>
+      ch === ':'
+        ? '<span class="clock-colon">:</span>'
+        : `<span class="clock-digit">${ch}</span>`,
+    )
+    .join('');
+  return `${digits} <span class="clock-period">${period}</span>`;
 });
 
 const COUNTDOWN_TOTAL = 300; // 5 minutes in seconds
