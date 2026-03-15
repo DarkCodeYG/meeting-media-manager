@@ -26,18 +26,20 @@
         <div id="preMeetingClock">
           {{ formattedCurrentTime }}
         </div>
-        <div id="countdownTimer">
-          <svg viewBox="0 0 120 120">
-            <circle class="countdown-track" cx="60" cy="60" r="54" />
-            <circle
-              class="countdown-progress"
-              cx="60"
-              cy="60"
-              r="54"
-              :style="{ strokeDashoffset: countdownDashOffset }"
-            />
-          </svg>
-          <span class="countdown-text">{{ countdownText }}</span>
+        <div id="countdownTimerWrapper">
+          <div id="countdownTimer">
+            <svg viewBox="0 0 120 120">
+              <circle class="countdown-track" cx="60" cy="60" r="54" />
+              <circle
+                class="countdown-progress"
+                cx="60"
+                cy="60"
+                r="54"
+                :style="{ strokeDashoffset: countdownDashOffset }"
+              />
+            </svg>
+            <span class="countdown-text">{{ countdownText }}</span>
+          </div>
         </div>
       </div>
       <div
@@ -1176,13 +1178,9 @@ onBeforeUnmount(() => {
   display: none;
 }
 
-.base-layer.clock-active :deep(#yeartext) {
-  transform: translateY(-5vh);
-}
-
 .base-layer.clock-active :deep(#preMeetingClockContainer) {
   position: absolute;
-  top: 57%;
+  top: 63%;
   left: 0;
   right: 0;
 }
