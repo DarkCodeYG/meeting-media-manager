@@ -21,7 +21,7 @@ const IS_TEST = process.env.TEST_VERSION == 'true';
 // App
 const APP_NAME = `${name}${IS_TEST ? '-test' : ''}`;
 const PRODUCT_NAME = `${productName}${IS_TEST ? ' - Test' : ''}`;
-const APP_ID = `sircharlo.${APP_NAME}`;
+const APP_ID = `darkcodeyg.${APP_NAME}`;
 
 // Sentry
 const SENTRY_ORG = 'jw-projects';
