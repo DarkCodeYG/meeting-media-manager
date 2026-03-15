@@ -37,6 +37,7 @@ import type { MediaSectionWithConfig } from 'src/types';
 import { storeToRefs } from 'pinia';
 import { locales } from 'src/constants/locales';
 import { toggleMediaWindowVisibility } from 'src/helpers/mediaPlayback';
+import { triggerZoomScreenShare } from 'src/helpers/zoom';
 import { isAudio, isVideo } from 'src/utils/media';
 import { useCurrentStateStore } from 'stores/current-state';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -118,6 +119,8 @@ const togglePlay = () => {
     globalThis.dispatchEvent(
       new CustomEvent('stop-talk-title', { detail: { except: sectionId } }),
     );
+    // Stop Zoom screen sharing for talk title display
+    triggerZoomScreenShare(false);
     toggleMediaWindowVisibility(true);
   }
 
