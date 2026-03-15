@@ -88,9 +88,9 @@ const buildHtml = () => {
     const subtitle = locale
       ? t('public-talk', {}, { locale })
       : t('public-talk');
-    return `<p class="pt-subtitle">${subtitle}</p><p class="pt-title">${title}</p>`;
+    return `<p class="pt-subtitle"><strong>${subtitle}</strong></p><p class="pt-title"><strong>${title}</strong></p>`;
   }
-  return `<p class="pt-title">${title}</p>`;
+  return `<p class="pt-title"><strong>${title}</strong></p>`;
 };
 
 const sectionId = props.mediaList.config?.uniqueId;
