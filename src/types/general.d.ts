@@ -19,10 +19,18 @@ export interface CacheList<T = unknown> {
 
 export type FontName =
   | 'JW-Icons'
-  | 'NotoSansSC'
-  | 'NotoSansTC'
   | 'Wt-BaeumMyungjo'
-  | 'Wt-ClearText-Bold';
+  | 'Wt-ClearText-Bold'
+  | 'WTClearTextGeorgian'
+  | 'WTClearTextJapanese'
+  | 'WTMannaSansKaren'
+  | 'WTMannaSansMongolian'
+  | 'WTMannaSansMyanmar'
+  | 'WTMannaSansTibetan'
+  | 'WTSetthaSpecial'
+  | 'WTTextNew'
+  | 'WTUKIJSpecial'
+  | 'WTXBZSpecial';
 
 export interface UrlVariables {
   base: string;

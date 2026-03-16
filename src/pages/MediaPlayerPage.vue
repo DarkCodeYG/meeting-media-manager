@@ -184,9 +184,9 @@ import {
   loadYeartextFont,
   setElementFont,
 } from 'src/helpers/fonts';
-import { useJwStore } from 'stores/jw';
 import { createTemporaryNotification } from 'src/helpers/notifications';
 import { isAudio, isImage, isVideo } from 'src/utils/media';
+import { useJwStore } from 'stores/jw';
 import {
   computed,
   onBeforeUnmount,
@@ -890,8 +890,13 @@ const { data: currentScript } = useBroadcastChannel<string, string>({
 const yeartextFontFamily = ref('');
 
 watch(
-  () => [currentScript.value, urlVariables.value?.mediator] as const,
-  async ([script]) => {
+  () =>
+    [
+      currentScript.value,
+      currentLang.value,
+      urlVariables.value?.mediator,
+    ] as const,
+  async ([script, lang]) => {
     if (script && urlVariables.value?.mediator) {
       if (urlVariables.value.base) {
         jwStore.$patch({
@@ -902,7 +907,10 @@ watch(
           },
         });
       }
-      yeartextFontFamily.value = await loadYeartextFont(script);
+      yeartextFontFamily.value = await loadYeartextFont(
+        script,
+        lang || undefined,
+      );
     }
   },
 );

@@ -90,6 +90,8 @@ interface Store {
   lookupPeriod: Partial<Record<string, DateInfo[]>>;
   memorials: Partial<Record<number, `${number}/${number}/${number}`>>;
   urlVariables: UrlVariables;
+  yeartextFontOverrides: Record<string, string>;
+  yeartextFontUrls: Partial<Record<string, string>>;
   yeartexts: Partial<Record<number, Partial<Record<JwLangCode, string>>>>;
 }
 
@@ -245,6 +247,84 @@ function findIconUrlInCss(cssText: string, cssUrl: string): null | string {
     }
   }
   return null;
+}
+
+/**
+ * Extracts language-specific yeartext font overrides from JW.org CSS.
+ * Parses rules like `.jwac.ms-CHINESE.ml-CHC p.themeScrp { font-family: NotoSansTC,...; }`
+ * Returns a mapping like { 'CHINESE.CHC': 'NotoSansTC,...' }
+ */
+function findYeartextFontOverridesInCss(
+  cssText: string,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  const ruleRegex =
+    /\.jwac\.ms-([A-Z]+)\.ml-([A-Z]+)[^{]*p\.themeScrp\s*\{\s*font-family:\s*([^}]+)\}/gi;
+  let match;
+  while ((match = ruleRegex.exec(cssText)) !== null) {
+    const script = match[1];
+    const lang = match[2];
+    const fontFamily = match[3]?.trim().replace(/;$/, '');
+    if (script && lang && fontFamily) {
+      result[`${script}.${lang}`] = fontFamily;
+    }
+  }
+  return result;
+}
+
+/**
+ * Maps CSS font-family names (as found in JW.org CSS) to our FontName values.
+ * Only includes fonts that need to be fetched from JW CDN.
+ */
+const CSS_FONT_TO_FONTNAME: Record<string, FontName> = {
+  WTClearTextGeorgian: 'WTClearTextGeorgian',
+  WTClearTextJapanese: 'WTClearTextJapanese',
+  WTMannaSansKaren: 'WTMannaSansKaren',
+  WTMannaSansMongolian: 'WTMannaSansMongolian',
+  WTMannaSansMyammar: 'WTMannaSansMyanmar', // CSS uses 'Myammar' (double m)
+  WTMannaSansTibetan: 'WTMannaSansTibetan',
+  WTSetthaSpecial: 'WTSetthaSpecial',
+  WTTextNew: 'WTTextNew',
+  WTUKIJSpecial: 'WTUKIJSpecial',
+  WTXBZSpecial: 'WTXBZSpecial',
+};
+
+/**
+ * Finds yeartext CDN font URLs within CSS text by parsing @font-face blocks.
+ * Only extracts fonts matching the JW/WT/Manna naming convention.
+ */
+function findYeartextFontUrlsInCss(
+  cssText: string,
+  cssUrl: string,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  const fontFaceBlocks = cssText.match(/@font-face\s*\{[^}]*\}/gi);
+  if (!fontFaceBlocks) return result;
+
+  for (const block of fontFaceBlocks) {
+    const familyMatch = /font-family:\s*["']?([^"';,}]+)["']?/i.exec(block);
+    if (!familyMatch?.[1]) continue;
+    const cssFamily = familyMatch[1].trim();
+
+    const fontName = CSS_FONT_TO_FONTNAME[cssFamily];
+    if (!fontName || result[fontName]) continue;
+
+    // Only take regular weight (400) or first occurrence
+    const weightMatch = /font-weight:\s*(\d+)/i.exec(block);
+    const weight = weightMatch?.[1] || '400';
+    if (weight !== '400') continue;
+
+    const urlMatch =
+      /url\(["']?([^"')]+\.(?:woff2|woff|otf|ttf)[^"']*)["']?\)/i.exec(block);
+    if (urlMatch?.[1]) {
+      try {
+        result[fontName] = new URL(urlMatch[1], cssUrl).href;
+      } catch {
+        result[fontName] = urlMatch[1];
+      }
+    }
+  }
+  return result;
 }
 
 export const useJwStore = defineStore('jw-store', {
@@ -643,9 +723,62 @@ export const useJwStore = defineStore('jw-store', {
         errorCatcher(error);
       }
     },
+    async updateYeartextFontUrls() {
+      try {
+        const baseUrl = this.urlVariables.base;
+        if (!baseUrl) return;
+
+        const jwUrl = `https://www.${baseUrl}/en/`;
+        const response = await fetchRaw(jwUrl, undefined, true);
+        if (!response.ok) return;
+
+        const html = await response.text();
+        const cssUrls = extractCssUrls(html, baseUrl);
+
+        for (const cssUrl of cssUrls) {
+          try {
+            const cssResponse = await fetchRaw(cssUrl, undefined, true);
+            if (!cssResponse.ok) continue;
+            const cssText = await cssResponse.text();
+            const found = findYeartextFontUrlsInCss(cssText, cssUrl);
+            if (Object.keys(found).length > 0) {
+              this.yeartextFontUrls = {
+                ...this.yeartextFontUrls,
+                ...found,
+              };
+            }
+            const overrides = findYeartextFontOverridesInCss(cssText);
+            if (Object.keys(overrides).length > 0) {
+              this.yeartextFontOverrides = {
+                ...this.yeartextFontOverrides,
+                ...overrides,
+              };
+            }
+          } catch (e) {
+            errorCatcher(e, {
+              contexts: {
+                fn: {
+                  args: { cssUrl },
+                  name: 'updateYeartextFontUrls - cssUrl',
+                },
+              },
+            });
+          }
+        }
+      } catch (e) {
+        errorCatcher(e, {
+          contexts: {
+            fn: {
+              args: {},
+              name: 'updateYeartextFontUrls - main',
+            },
+          },
+        });
+      }
+    },
   },
   getters: {
-    fontUrls: (state): Record<FontName, string> => {
+    fontUrls: (state): Partial<Record<FontName, string>> => {
       const { urlVariables } = state;
 
       const getFontUrl = (type: 'base' | 'mediator', path = '') => {
@@ -673,14 +806,8 @@ export const useJwStore = defineStore('jw-store', {
           'mediator',
           '/fonts/wt-clear-text/1.029/Wt-ClearText-Bold.woff2',
         ),
-        NotoSansSC: getFontUrl(
-          'mediator',
-          '/fonts/noto-cjk/2.004/NotoSansSC-Regular.otf',
-        ),
-        NotoSansTC: getFontUrl(
-          'mediator',
-          '/fonts/noto-cjk/2.004/NotoSansTC-Regular.otf',
-        ),
+        // Dynamically discovered yeartext CDN fonts (WT/JW/Manna)
+        ...(state.yeartextFontUrls as Partial<Record<FontName, string>>),
       };
     },
   },
@@ -722,6 +849,8 @@ export const useJwStore = defineStore('jw-store', {
         mediator: 'https://b.jw-cdn.org/apis/mediator',
         pubMedia: 'https://b.jw-cdn.org/apis/pub-media/GETPUBMEDIALINKS',
       },
+      yeartextFontOverrides: {},
+      yeartextFontUrls: {},
       yeartexts: {},
     };
   },
