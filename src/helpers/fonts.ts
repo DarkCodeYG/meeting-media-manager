@@ -61,21 +61,88 @@ export const getJwIconFromKeyword = (keyword: number | string | undefined) => {
   return jwIconsGlyphMap?.[icon] || fallbackJwIconsGlyphMap[icon] || '';
 };
 
-export const setCjkFont = async () => {
-  try {
-    const fontPath = await getLocalFontPath('Wt-ClearText-Bold');
-    const fontFace = new FontFace(
-      'Wt-ClearText-Bold-CJK',
-      'url("' + fontPath + '")',
-      { unicodeRange: 'U+0020-2013, U+2015-207F' },
-    );
-    await fontFace.load();
-    document.fonts.add(fontFace);
-  } catch (error) {
-    errorCatcher(error, {
-      contexts: { fn: { name: 'setCjkFont' } },
-    });
+// Yeartext font-family definitions per writing script
+// Reference: https://www.jw.org yeartext CSS (jwac.ms-* classes)
+interface YeartextFontConfig {
+  cdnFont?: FontName;
+  fontFamily: string;
+}
+
+const YEARTEXT_FONTS: Record<string, YeartextFontConfig> = {
+  ARABIC: {
+    fontFamily: "NotoNaskhArabic, NotoSerif, 'Simplified Arabic', serif",
+  },
+  ARMENIAN: { fontFamily: 'NotoSerifArmenian, NotoSerif, serif' },
+  BENGALI: { fontFamily: 'NotoSansBengali, NotoSans, sans-serif' },
+  CAMBODIAN: { fontFamily: 'NotoSerifKhmer, NotoSerif, serif' },
+  CHINESE: {
+    fontFamily:
+      "NotoSansSC, 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', NotoSans, sans-serif",
+  },
+  CYRILLIC: { fontFamily: "'Wt-ClearText-Bold', serif" },
+  DEVANAGARI: { fontFamily: 'NotoSerifDevanagari, NotoSerif, serif' },
+  ETHIOPIC: { fontFamily: 'AbyssinicaSIL, sans-serif' },
+  GEORGIAN: { fontFamily: 'WTClearTextGeorgian, NotoSerif, serif' },
+  GREEK: { fontFamily: "'Wt-ClearText-Bold', serif" },
+  GUJARATI: { fontFamily: 'NotoSerifGujarati, NotoSerif, serif' },
+  GURMUKHI: { fontFamily: 'NotoSansGurmukhi, NotoSans, Raavi' },
+  HEBREW: { fontFamily: 'NotoSerifHebrew, NotoSerif, serif' },
+  JAPANESE: { fontFamily: 'WTClearTextJapanese, serif' },
+  KANNADA: { fontFamily: 'NotoSerifKannada, NotoSerif, serif' },
+  KOREAN: {
+    cdnFont: 'Wt-BaeumMyungjo',
+    fontFamily: "'Wt-BaeumMyungjo', serif",
+  },
+  LAOTIAN: { fontFamily: "WTSetthaSpecial, 'Dok Champa', sans-serif" },
+  MALAYALAM: {
+    fontFamily: 'NotoSansMalayalamSemiCondensed, NotoSans, Kartika, sans-serif',
+  },
+  MONGOLIAN: {
+    fontFamily:
+      "WTMannaSansMongolian, NotoSansSC, 'Microsoft YaHei', NotoSans",
+  },
+  MYANMAR: {
+    fontFamily:
+      "WTMannaSansMyanmar, NotoSans, 'Myanmar Sangam MN', 'Myanmar MN', sans-serif",
+  },
+  ORIYA: {
+    fontFamily:
+      "NotoSansOriya, NotoSans, 'Oriya Sangam MN', 'Oriya MN', Kalinga, 'Trebuchet MS', sans-serif",
+  },
+  ROMAN: { fontFamily: "'Wt-ClearText-Bold', serif" },
+  SINDHI: { fontFamily: 'NotoSerif, Georgia, serif' },
+  SINHALESE: { fontFamily: 'NotoSerifSinhala, NotoSerif, serif' },
+  TAMIL: {
+    fontFamily:
+      "NotoSansTamil, NotoSans, Latha, 'Inai Mathi', 'Arial Unicode MS', sans-serif",
+  },
+  TELUGU: {
+    fontFamily:
+      "NotoSansTelugu, NotoSans, Gautami, 'Iskoola Pota', Vani, sans-serif",
+  },
+  THAI: { fontFamily: 'WTTextNew, serif' },
+  TIBETAN: { fontFamily: 'WTMannaSansTibetan, NotoSans, sans-serif' },
+  URDU: { fontFamily: "NotoNastaliqUrdu, NotoSans, 'Jameel Noori Nastaleeq'" },
+};
+
+const DEFAULT_YEARTEXT_FONT: YeartextFontConfig = {
+  fontFamily: "'Wt-ClearText-Bold', 'Noto Serif Variable', serif",
+};
+
+/**
+ * Load the appropriate yeartext font based on writing script.
+ * Returns the CSS font-family string to apply.
+ */
+export const loadYeartextFont = async (
+  script?: string,
+): Promise<string> => {
+  if (!script) return DEFAULT_YEARTEXT_FONT.fontFamily;
+  const config =
+    YEARTEXT_FONTS[script.toUpperCase()] || DEFAULT_YEARTEXT_FONT;
+  if (config.cdnFont) {
+    await setElementFont(config.cdnFont);
   }
+  return config.fontFamily;
 };
 
 export const setElementFont = async (fontName: FontName) => {

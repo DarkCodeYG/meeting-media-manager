@@ -665,6 +665,10 @@ export const useJwStore = defineStore('jw-store', {
         'JW-Icons':
           state.jwIconsUrl ||
           getFontUrl('base', '/assets/fonts/jw-icons-external-d876da3.woff'),
+        'Wt-BaeumMyungjo': getFontUrl(
+          'mediator',
+          '/fonts/wt-baeum-myungjo/1.000/Wt-BaeumMyungjo-Regular.woff',
+        ),
         'Wt-ClearText-Bold': getFontUrl(
           'mediator',
           '/fonts/wt-clear-text/1.029/Wt-ClearText-Bold.woff2',

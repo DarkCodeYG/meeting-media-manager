@@ -1285,6 +1285,18 @@ watchImmediate(
   },
 );
 
+// Send current writing script to the media player page for yeartext font selection
+const { post: postCurrentScript } = useBroadcastChannel<string, string>({
+  name: 'current-script',
+});
+
+watchImmediate(
+  () => currentState.currentLangObject?.script,
+  (script) => {
+    if (script) postCurrentScript(script);
+  },
+);
+
 // Listen for public talk title display events
 const handlePublicTalkTitle = (e: Event) => {
   const html = (e as CustomEvent).detail?.html;
@@ -1358,6 +1370,9 @@ watchImmediate(
     postHideMediaLogo(currentSettings.value?.hideMediaLogo);
     if (currentSettings.value?.lang) {
       postCurrentLang(currentSettings.value.lang);
+    }
+    if (currentState.currentLangObject?.script) {
+      postCurrentScript(currentState.currentLangObject.script);
     }
     checkPreMeetingClock();
     if (!yeartextWatcherPaused.value) {

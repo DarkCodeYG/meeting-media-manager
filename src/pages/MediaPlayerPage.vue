@@ -23,7 +23,8 @@
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div
         id="yeartext"
-        :class="['center', { cjk: isCjkLang, ko: isKoLang }]"
+        class="center"
+        :style="yeartextFontStyle"
         v-html="sanitize(yeartext || '')"
       />
       <div v-if="showPreMeetingClock" id="preMeetingClockContainer">
@@ -180,7 +181,7 @@ import { useQuasar } from 'quasar';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import {
   getJwIconFromKeyword,
-  setCjkFont,
+  loadYeartextFont,
   setElementFont,
 } from 'src/helpers/fonts';
 import { createTemporaryNotification } from 'src/helpers/notifications';
@@ -878,19 +879,27 @@ const { data: currentLang } = useBroadcastChannel<string, string>({
   name: 'current-lang',
 });
 
-const CJK_LANG_CODES = ['CHS', 'CHT', 'KO'];
-const isCjkLang = computed(() =>
-  CJK_LANG_CODES.includes(currentLang.value || ''),
-);
-const isKoLang = computed(() => currentLang.value === 'KO');
-
-const cjkFontLoaded = ref(false);
-watch(isCjkLang, async (isCjk) => {
-  if (isCjk && !cjkFontLoaded.value) {
-    await setCjkFont();
-    cjkFontLoaded.value = true;
-  }
+// Receive writing script from main layout for yeartext font selection
+const { data: currentScript } = useBroadcastChannel<string, string>({
+  name: 'current-script',
 });
+
+const yeartextFontFamily = ref('');
+
+watch(
+  () => currentScript.value,
+  async (script) => {
+    if (script) {
+      yeartextFontFamily.value = await loadYeartextFont(script);
+    }
+  },
+);
+
+const yeartextFontStyle = computed(() =>
+  yeartextFontFamily.value
+    ? { fontFamily: yeartextFontFamily.value }
+    : undefined,
+);
 
 const { data: preMeetingClockRemaining } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
