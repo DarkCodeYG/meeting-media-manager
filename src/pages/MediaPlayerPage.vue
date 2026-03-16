@@ -184,6 +184,7 @@ import {
   loadYeartextFont,
   setElementFont,
 } from 'src/helpers/fonts';
+import { useJwStore } from 'stores/jw';
 import { createTemporaryNotification } from 'src/helpers/notifications';
 import { isAudio, isImage, isVideo } from 'src/utils/media';
 import {
@@ -200,6 +201,8 @@ import { useI18n } from 'vue-i18n';
 const { sanitize } = DOMPurify;
 
 const { t } = useI18n();
+
+const jwStore = useJwStore();
 
 const { getScreenAccessStatus, PLATFORM } = globalThis.electronApi;
 
@@ -887,9 +890,18 @@ const { data: currentScript } = useBroadcastChannel<string, string>({
 const yeartextFontFamily = ref('');
 
 watch(
-  () => currentScript.value,
-  async (script) => {
-    if (script) {
+  () => [currentScript.value, urlVariables.value?.mediator] as const,
+  async ([script]) => {
+    if (script && urlVariables.value?.mediator) {
+      if (urlVariables.value.base) {
+        jwStore.$patch({
+          urlVariables: {
+            base: urlVariables.value.base,
+            mediator: urlVariables.value.mediator,
+            pubMedia: jwStore.urlVariables?.pubMedia ?? '',
+          },
+        });
+      }
       yeartextFontFamily.value = await loadYeartextFont(script);
     }
   },

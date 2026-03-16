@@ -17,7 +17,12 @@ export interface CacheList<T = unknown> {
   updated: Date | null | undefined;
 }
 
-export type FontName = 'JW-Icons' | 'Wt-BaeumMyungjo' | 'Wt-ClearText-Bold';
+export type FontName =
+  | 'JW-Icons'
+  | 'NotoSansSC'
+  | 'NotoSansTC'
+  | 'Wt-BaeumMyungjo'
+  | 'Wt-ClearText-Bold';
 
 export interface UrlVariables {
   base: string;

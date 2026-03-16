@@ -673,6 +673,14 @@ export const useJwStore = defineStore('jw-store', {
           'mediator',
           '/fonts/wt-clear-text/1.029/Wt-ClearText-Bold.woff2',
         ),
+        NotoSansSC: getFontUrl(
+          'mediator',
+          '/fonts/noto-cjk/2.004/NotoSansSC-Regular.otf',
+        ),
+        NotoSansTC: getFontUrl(
+          'mediator',
+          '/fonts/noto-cjk/2.004/NotoSansTC-Regular.otf',
+        ),
       };
     },
   },

@@ -76,6 +76,7 @@ const YEARTEXT_FONTS: Record<string, YeartextFontConfig> = {
   BENGALI: { fontFamily: 'NotoSansBengali, NotoSans, sans-serif' },
   CAMBODIAN: { fontFamily: 'NotoSerifKhmer, NotoSerif, serif' },
   CHINESE: {
+    cdnFont: 'NotoSansSC',
     fontFamily:
       "NotoSansSC, 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', NotoSans, sans-serif",
   },
@@ -172,9 +173,10 @@ export const setElementFont = async (fontName: FontName) => {
         errorCatcher(error, {
           contexts: { fn: { fontName, name: 'setElementFont fallback', url } },
         });
+        delete fontFacePromises[fontName];
       }
 
-      return false;
+      return fallbackLoaded;
     }
   })();
 
