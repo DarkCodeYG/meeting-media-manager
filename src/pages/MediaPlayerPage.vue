@@ -884,6 +884,14 @@ const isCjkLang = computed(() =>
 );
 const isKoLang = computed(() => currentLang.value === 'KO');
 
+const cjkFontLoaded = ref(false);
+watch(isCjkLang, async (isCjk) => {
+  if (isCjk && !cjkFontLoaded.value) {
+    await setCjkFont();
+    cjkFontLoaded.value = true;
+  }
+});
+
 const { data: preMeetingClockRemaining } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
 });
@@ -1118,7 +1126,6 @@ const jwIconsFontLoaded = ref(false);
 const loadFonts = async () => {
   try {
     await setElementFont('Wt-ClearText-Bold');
-    await setCjkFont();
   } catch (e) {
     errorCatcher(e, {
       contexts: { fn: { fontName: 'Wt-ClearText-Bold', name: 'loadFonts' } },
