@@ -18,7 +18,26 @@ export interface CacheList<T = unknown> {
 }
 
 export type FontName =
+  | 'AbyssinicaSIL'
   | 'JW-Icons'
+  | 'NotoNaskhArabic'
+  | 'NotoNastaliqUrdu'
+  | 'NotoSans'
+  | 'NotoSansBengali'
+  | 'NotoSansGurmukhi'
+  | 'NotoSansMalayalam'
+  | 'NotoSansOriya'
+  | 'NotoSansSC'
+  | 'NotoSansTamil'
+  | 'NotoSansTC'
+  | 'NotoSansTelugu'
+  | 'NotoSerifArmenian'
+  | 'NotoSerifDevanagari'
+  | 'NotoSerifGujarati'
+  | 'NotoSerifHebrew'
+  | 'NotoSerifKannada'
+  | 'NotoSerifKhmer'
+  | 'NotoSerifSinhala'
   | 'Wt-BaeumMyungjo'
   | 'Wt-ClearText-Bold'
   | 'WTClearTextGeorgian'
@@ -29,7 +48,6 @@ export type FontName =
   | 'WTMannaSansTibetan'
   | 'WTSetthaSpecial'
   | 'WTTextNew'
-  | 'WTUKIJSpecial'
   | 'WTXBZSpecial';
 
 export interface UrlVariables {

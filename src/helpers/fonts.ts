@@ -18,6 +18,228 @@ const { join } = path;
 let jwIconsGlyphMapPromise: null | Promise<void> = null;
 let jwIconsGlyphMap: null | Record<string, string> = null;
 
+// Yeartext font configuration per writing script
+interface YeartextFontConfig {
+  cdnFont?: FontName;
+  fontFamily: string;
+}
+
+const DEFAULT_YEARTEXT_FONT: YeartextFontConfig = {
+  fontFamily: "'Wt-ClearText-Bold', serif",
+};
+
+// Maps JwLanguage.script (uppercase) to font config
+// Based on JW.org's jwac.ms-* CSS classes
+const YEARTEXT_FONTS: Record<string, YeartextFontConfig> = {
+  ARABIC: {
+    cdnFont: 'NotoNaskhArabic',
+    fontFamily: "'NotoNaskhArabic', 'NotoSerifVariable', serif",
+  },
+  ARMENIAN: {
+    cdnFont: 'NotoSerifArmenian',
+    fontFamily: "'NotoSerifArmenian', 'Noto Serif Variable', serif",
+  },
+  ASSYRIAN: { fontFamily: "'Noto Serif Variable', Georgia, serif" },
+  BENGALI: {
+    cdnFont: 'NotoSansBengali',
+    fontFamily: "'NotoSansBengali', 'NotoSans', sans-serif",
+  },
+  CAMBODIAN: {
+    cdnFont: 'NotoSerifKhmer',
+    fontFamily: "'NotoSerifKhmer', 'Noto Serif Variable', serif",
+  },
+  CHINESE: {
+    cdnFont: 'NotoSansSC',
+    fontFamily:
+      "'NotoSansSC', 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', sans-serif",
+  },
+  CYRILLIC: { fontFamily: "'Wt-ClearText-Bold', serif" },
+  DEVANAGARI: {
+    cdnFont: 'NotoSerifDevanagari',
+    fontFamily: "'NotoSerifDevanagari', 'Noto Serif Variable', serif",
+  },
+  ETHIOPIC: {
+    cdnFont: 'AbyssinicaSIL',
+    fontFamily: "'AbyssinicaSIL', sans-serif",
+  },
+  GEORGIAN: {
+    cdnFont: 'WTClearTextGeorgian',
+    fontFamily: "'WTClearTextGeorgian', 'Noto Serif Variable', serif",
+  },
+  GREEK: { fontFamily: "'Wt-ClearText-Bold', serif" },
+  GUJARATI: {
+    cdnFont: 'NotoSerifGujarati',
+    fontFamily: "'NotoSerifGujarati', 'Noto Serif Variable', serif",
+  },
+  GURMUKHI: {
+    cdnFont: 'NotoSansGurmukhi',
+    fontFamily: "'NotoSansGurmukhi', 'NotoSans', Raavi",
+  },
+  HEBREW: {
+    cdnFont: 'NotoSerifHebrew',
+    fontFamily: "'NotoSerifHebrew', 'Noto Serif Variable', serif",
+  },
+  JAPANESE: {
+    cdnFont: 'WTClearTextJapanese',
+    fontFamily: "'WTClearTextJapanese', serif",
+  },
+  KANNADA: {
+    cdnFont: 'NotoSerifKannada',
+    fontFamily: "'NotoSerifKannada', 'Noto Serif Variable', serif",
+  },
+  KOREAN: {
+    cdnFont: 'Wt-BaeumMyungjo',
+    fontFamily: "'Wt-BaeumMyungjo', serif",
+  },
+  LAOTIAN: {
+    cdnFont: 'WTSetthaSpecial',
+    fontFamily: "'WTSetthaSpecial', 'Dok Champa', sans-serif",
+  },
+  MALAYALAM: {
+    cdnFont: 'NotoSansMalayalam',
+    fontFamily: "'NotoSansMalayalam', 'NotoSans', Kartika, sans-serif",
+  },
+  MONGOLIAN: {
+    cdnFont: 'WTMannaSansMongolian',
+    fontFamily: "'WTMannaSansMongolian', 'NotoSansSC', 'NotoSans'",
+  },
+  MYANMAR: {
+    cdnFont: 'WTMannaSansMyanmar',
+    fontFamily:
+      "'WTMannaSansMyanmar', 'NotoSans', 'Myanmar Sangam MN', sans-serif",
+  },
+  ORIYA: {
+    cdnFont: 'NotoSansOriya',
+    fontFamily:
+      "'NotoSansOriya', 'NotoSans', 'Oriya Sangam MN', Kalinga, sans-serif",
+  },
+  ROMAN: { fontFamily: "'Wt-ClearText-Bold', serif" },
+  SINDHI: { fontFamily: "'Noto Serif Variable', Georgia, serif" },
+  SINHALESE: {
+    cdnFont: 'NotoSerifSinhala',
+    fontFamily: "'NotoSerifSinhala', 'Noto Serif Variable', serif",
+  },
+  TAMIL: {
+    cdnFont: 'NotoSansTamil',
+    fontFamily: "'NotoSansTamil', 'NotoSans', Latha, sans-serif",
+  },
+  TELUGU: {
+    cdnFont: 'NotoSansTelugu',
+    fontFamily: "'NotoSansTelugu', 'NotoSans', Gautami, sans-serif",
+  },
+  THAI: { cdnFont: 'WTTextNew', fontFamily: "'WTTextNew', serif" },
+  TIBETAN: {
+    cdnFont: 'WTMannaSansTibetan',
+    fontFamily: "'WTMannaSansTibetan', 'NotoSans', sans-serif",
+  },
+  URDU: {
+    cdnFont: 'NotoNastaliqUrdu',
+    fontFamily: "'NotoNastaliqUrdu', 'NotoSans', 'Jameel Noori Nastaleeq'",
+  },
+};
+
+// Language-specific overrides (script.langCode → font config)
+// From JW.org CSS: .jwac.ms-SCRIPT.ml-LANG rules
+const YEARTEXT_LANG_OVERRIDES: Record<string, YeartextFontConfig> = {
+  'ARABIC.AJA': {
+    cdnFont: 'WTXBZSpecial',
+    fontFamily: "'WTXBZSpecial', 'Geeza Pro', 'Simplified Arabic'",
+  },
+  'ARABIC.AZA': {
+    cdnFont: 'WTXBZSpecial',
+    fontFamily: "'WTXBZSpecial', sans-serif",
+  },
+  'ARABIC.DAR': {
+    cdnFont: 'WTXBZSpecial',
+    fontFamily: "'WTXBZSpecial', 'Geeza Pro', 'Simplified Arabic'",
+  },
+  'ARABIC.PH': {
+    cdnFont: 'WTXBZSpecial',
+    fontFamily: "'WTXBZSpecial', 'Geeza Pro', 'Simplified Arabic'",
+  },
+  'ARABIC.PR': {
+    cdnFont: 'WTXBZSpecial',
+    fontFamily: "'WTXBZSpecial', 'Geeza Pro', 'Simplified Arabic'",
+  },
+  'ARABIC.RDA': {
+    cdnFont: 'WTXBZSpecial',
+    fontFamily: "'WTXBZSpecial', 'Geeza Pro', 'Simplified Arabic'",
+  },
+  'CHINESE.CH': {
+    cdnFont: 'NotoSansTC',
+    fontFamily:
+      "'NotoSansTC', 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', sans-serif",
+  },
+  'CHINESE.CHC': {
+    cdnFont: 'NotoSansTC',
+    fontFamily:
+      "'NotoSansTC', 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', sans-serif",
+  },
+  'CHINESE.CHH': {
+    cdnFont: 'NotoSansTC',
+    fontFamily:
+      "'NotoSansTC', 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', sans-serif",
+  },
+  'CHINESE.CHW': {
+    cdnFont: 'NotoSansTC',
+    fontFamily:
+      "'NotoSansTC', 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', sans-serif",
+  },
+  'CHINESE.HSL': {
+    cdnFont: 'NotoSansTC',
+    fontFamily:
+      "'NotoSansTC', 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', sans-serif",
+  },
+  'CHINESE.TSL': {
+    cdnFont: 'NotoSansTC',
+    fontFamily:
+      "'NotoSansTC', 'Microsoft YaHei', 'Heiti SC', 'Arial Unicode MS', sans-serif",
+  },
+  'MYANMAR.KR': {
+    cdnFont: 'WTMannaSansKaren',
+    fontFamily: "'WTMannaSansKaren', Padauk, Zawgyi, sans-serif",
+  },
+  'MYANMAR.PK': {
+    cdnFont: 'WTMannaSansKaren',
+    fontFamily: "'WTMannaSansKaren', Padauk, Zawgyi, sans-serif",
+  },
+};
+
+/**
+ * Load the yeartext font for a given writing script and optional language code.
+ * Downloads the font from CDN (jsDelivr or JW CDN) and caches locally.
+ */
+export const loadYeartextFont = async (
+  script?: string,
+  langCode?: string,
+): Promise<string> => {
+  const scriptKey = script?.toUpperCase() || '';
+
+  // Check language-specific override first, then fall back to script
+  const langKey = langCode
+    ? `${scriptKey}.${langCode.toUpperCase()}`
+    : undefined;
+  const config =
+    (langKey ? YEARTEXT_LANG_OVERRIDES[langKey] : undefined) ||
+    YEARTEXT_FONTS[scriptKey] ||
+    DEFAULT_YEARTEXT_FONT;
+
+  if (config.cdnFont) {
+    // For WT/JW/Manna fonts, ensure URLs are discovered first
+    const store = useJwStore();
+    const isWtFont =
+      config.cdnFont.startsWith('WT') ||
+      config.cdnFont.startsWith('Wt-') ||
+      config.cdnFont === 'AbyssinicaSIL';
+    if (isWtFont && !store.fontUrls[config.cdnFont]) {
+      await store.updateYeartextFontUrls();
+    }
+    await setElementFont(config.cdnFont);
+  }
+
+  return config.fontFamily;
+};
+
 const fontFacePromises: Partial<Record<FontName, Promise<boolean>>> = {};
 const localFontPathPromises: Partial<Record<FontName, Promise<string>>> = {};
 
@@ -61,149 +283,6 @@ export const getJwIconFromKeyword = (keyword: number | string | undefined) => {
   return jwIconsGlyphMap?.[icon] || fallbackJwIconsGlyphMap[icon] || '';
 };
 
-// Yeartext font-family definitions per writing script
-// Reference: https://www.jw.org yeartext CSS (jwac.ms-* classes)
-interface YeartextFontConfig {
-  cdnFont?: FontName;
-  fontFamily: string;
-}
-
-const YEARTEXT_FONTS: Record<string, YeartextFontConfig> = {
-  ARABIC: {
-    fontFamily:
-      "'Noto Naskh Arabic Variable', 'Noto Serif Variable', 'Simplified Arabic', serif",
-  },
-  ARMENIAN: {
-    fontFamily: "'Noto Serif Armenian Variable', 'Noto Serif Variable', serif",
-  },
-  ASSYRIAN: { fontFamily: "'Noto Serif Variable', Georgia, serif" },
-  BENGALI: {
-    fontFamily:
-      "'Noto Sans Bengali Variable', 'Noto Sans Variable', sans-serif",
-  },
-  CAMBODIAN: {
-    fontFamily: "'Noto Serif Khmer Variable', 'Noto Serif Variable', serif",
-  },
-  CHINESE: {
-    fontFamily:
-      "'Noto Sans SC', 'Microsoft YaHei', 'Heiti SC', 'Noto Sans Variable', sans-serif",
-  },
-  CYRILLIC: { fontFamily: "'Wt-ClearText-Bold', serif" },
-  DEVANAGARI: {
-    fontFamily:
-      "'Noto Serif Devanagari Variable', 'Noto Serif Variable', serif",
-  },
-  ETHIOPIC: { fontFamily: "'Abyssinica SIL', sans-serif" },
-  GEORGIAN: {
-    cdnFont: 'WTClearTextGeorgian',
-    fontFamily: "'WTClearTextGeorgian', 'Noto Serif Variable', serif",
-  },
-  GREEK: { fontFamily: "'Wt-ClearText-Bold', serif" },
-  GUJARATI: {
-    fontFamily: "'Noto Serif Gujarati Variable', 'Noto Serif Variable', serif",
-  },
-  GURMUKHI: {
-    fontFamily: "'Noto Sans Gurmukhi Variable', 'Noto Sans Variable', Raavi",
-  },
-  HEBREW: {
-    fontFamily: "'Noto Serif Hebrew Variable', 'Noto Serif Variable', serif",
-  },
-  JAPANESE: {
-    cdnFont: 'WTClearTextJapanese',
-    fontFamily: "'WTClearTextJapanese', serif",
-  },
-  KANNADA: {
-    fontFamily: "'Noto Serif Kannada Variable', 'Noto Serif Variable', serif",
-  },
-  KOREAN: {
-    cdnFont: 'Wt-BaeumMyungjo',
-    fontFamily: "'Wt-BaeumMyungjo', serif",
-  },
-  LAOTIAN: {
-    cdnFont: 'WTSetthaSpecial',
-    fontFamily: "'WTSetthaSpecial', 'Dok Champa', sans-serif",
-  },
-  MALAYALAM: {
-    fontFamily:
-      "'Noto Sans Malayalam Variable', 'Noto Sans Variable', Kartika, sans-serif",
-  },
-  MONGOLIAN: {
-    cdnFont: 'WTMannaSansMongolian',
-    fontFamily:
-      "'WTMannaSansMongolian', 'Noto Sans SC Variable', 'Noto Sans Variable'",
-  },
-  MYANMAR: {
-    cdnFont: 'WTMannaSansMyanmar',
-    fontFamily:
-      "'WTMannaSansMyanmar', 'Noto Sans Variable', 'Myanmar Sangam MN', 'Myanmar MN', sans-serif",
-  },
-  ORIYA: {
-    fontFamily:
-      "'Noto Sans Oriya Variable', 'Noto Sans Variable', 'Oriya Sangam MN', Kalinga, sans-serif",
-  },
-  ROMAN: { fontFamily: "'Wt-ClearText-Bold', serif" },
-  SINDHI: { fontFamily: "'Noto Serif Variable', Georgia, serif" },
-  SINHALESE: {
-    fontFamily: "'Noto Serif Sinhala Variable', 'Noto Serif Variable', serif",
-  },
-  TAMIL: {
-    fontFamily:
-      "'Noto Sans Tamil Variable', 'Noto Sans Variable', Latha, 'Inai Mathi', sans-serif",
-  },
-  TELUGU: {
-    fontFamily:
-      "'Noto Sans Telugu Variable', 'Noto Sans Variable', Gautami, 'Iskoola Pota', Vani, sans-serif",
-  },
-  THAI: {
-    cdnFont: 'WTTextNew',
-    fontFamily: "'WTTextNew', serif",
-  },
-  TIBETAN: {
-    cdnFont: 'WTMannaSansTibetan',
-    fontFamily: "'WTMannaSansTibetan', 'Noto Sans Variable', sans-serif",
-  },
-  URDU: {
-    fontFamily:
-      "'Noto Nastaliq Urdu Variable', 'Noto Sans Variable', 'Jameel Noori Nastaleeq'",
-  },
-};
-
-const DEFAULT_YEARTEXT_FONT: YeartextFontConfig = {
-  fontFamily: "'Wt-ClearText-Bold', 'Noto Serif Variable', serif",
-};
-
-/**
- * Load the appropriate yeartext font based on writing script and language code.
- * Checks for language-specific overrides (e.g., CHINESE.CHC → NotoSansTC)
- * discovered dynamically from JW.org CSS.
- * Returns the CSS font-family string to apply.
- */
-export const loadYeartextFont = async (
-  script?: string,
-  langCode?: string,
-): Promise<string> => {
-  if (!script) return DEFAULT_YEARTEXT_FONT.fontFamily;
-
-  const jwStore = useJwStore();
-
-  // Check for language-specific override from JW.org CSS
-  if (langCode) {
-    const overrideKey = `${script.toUpperCase()}.${langCode.toUpperCase()}`;
-    const override = jwStore.yeartextFontOverrides[overrideKey];
-    if (override) return override;
-  }
-
-  const config = YEARTEXT_FONTS[script.toUpperCase()] || DEFAULT_YEARTEXT_FONT;
-  if (config.cdnFont) {
-    // Ensure CDN font URL is available before loading
-    if (!jwStore.fontUrls[config.cdnFont]) {
-      await jwStore.updateYeartextFontUrls();
-    }
-    await setElementFont(config.cdnFont);
-  }
-  return config.fontFamily;
-};
-
 export const setElementFont = async (fontName: FontName) => {
   if (!fontName) return false;
 
@@ -224,7 +303,7 @@ export const setElementFont = async (fontName: FontName) => {
       errorCatcher(error, {
         contexts: { fn: { fontName, name: 'setElementFont first try' } },
       });
-      const url = useJwStore().fontUrls[fontName] || '';
+      const url = useJwStore().fontUrls[fontName];
       const fallbackLoaded = await setFallbackFont(fontName, url);
 
       if (!fallbackLoaded) {
@@ -278,8 +357,7 @@ const needsDownload = async (
   if (!(await exists(fontPath))) return true;
 
   const store = useJwStore();
-  const url = store.fontUrls[fontName] || '';
-  if (!url) return false;
+  const url = store.fontUrls[fontName];
 
   try {
     const head = await withTimeout(5000, (signal) =>
@@ -307,10 +385,9 @@ const needsDownload = async (
 const downloadFont = async (fontPath: string, fontName: FontName) => {
   const store = useJwStore();
 
-  const fontUrl = store.fontUrls[fontName] || '';
   const fetchFont = async () =>
     withTimeout(30000, (signal) =>
-      fetchRaw(fontUrl, { method: 'GET', signal }),
+      fetchRaw(store.fontUrls[fontName], { method: 'GET', signal }),
     );
 
   let response = await fetchFont();

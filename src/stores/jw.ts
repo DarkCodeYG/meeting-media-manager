@@ -794,10 +794,86 @@ export const useJwStore = defineStore('jw-store', {
         }
       };
 
+      const jsdelivr = (font: string, file: string) =>
+        `https://cdn.jsdelivr.net/fontsource/fonts/${font}/${file}`;
+
       return {
+        AbyssinicaSIL: jsdelivr(
+          'abyssinica-sil',
+          '400-normal/latin-400-normal.woff2',
+        ),
         'JW-Icons':
           state.jwIconsUrl ||
           getFontUrl('base', '/assets/fonts/jw-icons-external-d876da3.woff'),
+        NotoNaskhArabic: jsdelivr(
+          'noto-naskh-arabic:vf',
+          'arabic-wght-normal.woff2',
+        ),
+        NotoNastaliqUrdu: jsdelivr(
+          'noto-nastaliq-urdu:vf',
+          'arabic-wght-normal.woff2',
+        ),
+        NotoSans: jsdelivr('noto-sans:vf', 'latin-wght-normal.woff2'),
+        NotoSansBengali: jsdelivr(
+          'noto-sans-bengali:vf',
+          'bengali-wght-normal.woff2',
+        ),
+        NotoSansGurmukhi: jsdelivr(
+          'noto-sans-gurmukhi:vf',
+          'gurmukhi-wght-normal.woff2',
+        ),
+        NotoSansMalayalam: jsdelivr(
+          'noto-sans-malayalam:vf',
+          'malayalam-wght-normal.woff2',
+        ),
+        NotoSansOriya: jsdelivr(
+          'noto-sans-oriya:vf',
+          'oriya-wght-normal.woff2',
+        ),
+        NotoSansSC: jsdelivr(
+          'noto-sans-sc',
+          '400-normal/chinese-simplified-400-normal.woff2',
+        ),
+        NotoSansTamil: jsdelivr(
+          'noto-sans-tamil:vf',
+          'tamil-wght-normal.woff2',
+        ),
+        NotoSansTC: jsdelivr(
+          'noto-sans-tc',
+          '400-normal/chinese-traditional-400-normal.woff2',
+        ),
+        NotoSansTelugu: jsdelivr(
+          'noto-sans-telugu:vf',
+          'telugu-wght-normal.woff2',
+        ),
+        NotoSerifArmenian: jsdelivr(
+          'noto-serif-armenian:vf',
+          'armenian-wght-normal.woff2',
+        ),
+        NotoSerifDevanagari: jsdelivr(
+          'noto-serif-devanagari:vf',
+          'devanagari-wght-normal.woff2',
+        ),
+        NotoSerifGujarati: jsdelivr(
+          'noto-serif-gujarati:vf',
+          'gujarati-wght-normal.woff2',
+        ),
+        NotoSerifHebrew: jsdelivr(
+          'noto-serif-hebrew:vf',
+          'hebrew-wght-normal.woff2',
+        ),
+        NotoSerifKannada: jsdelivr(
+          'noto-serif-kannada:vf',
+          'kannada-wght-normal.woff2',
+        ),
+        NotoSerifKhmer: jsdelivr(
+          'noto-serif-khmer:vf',
+          'khmer-wght-normal.woff2',
+        ),
+        NotoSerifSinhala: jsdelivr(
+          'noto-serif-sinhala:vf',
+          'sinhala-wght-normal.woff2',
+        ),
         'Wt-BaeumMyungjo': getFontUrl(
           'mediator',
           '/fonts/wt-baeum-myungjo/1.000/Wt-BaeumMyungjo-Regular.woff',
@@ -808,7 +884,7 @@ export const useJwStore = defineStore('jw-store', {
         ),
         // Dynamically discovered yeartext CDN fonts (WT/JW/Manna)
         ...(state.yeartextFontUrls as Partial<Record<FontName, string>>),
-      };
+      } as Record<FontName, string>;
     },
   },
   persist: {
