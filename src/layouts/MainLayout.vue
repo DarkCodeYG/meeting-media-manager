@@ -1285,15 +1285,22 @@ watchImmediate(
   },
 );
 
-// Send current writing script to the media player page for yeartext font selection
+// Send current writing script and lang code to the media player page for yeartext font selection
 const { post: postCurrentScript } = useBroadcastChannel<string, string>({
   name: 'current-script',
 });
 
 watchImmediate(
   () => currentState.currentLangObject?.script,
-  (script) => {
+  (script: string | undefined) => {
     if (script) postCurrentScript(script);
+  },
+);
+
+watchImmediate(
+  () => currentState.currentLangObject?.langcode,
+  (lang: string | undefined) => {
+    if (lang) postCurrentLang(String(lang));
   },
 );
 
@@ -1373,6 +1380,9 @@ watchImmediate(
     }
     if (currentState.currentLangObject?.script) {
       postCurrentScript(currentState.currentLangObject.script);
+    }
+    if (currentState.currentLangObject?.langcode) {
+      postCurrentLang(String(currentState.currentLangObject.langcode));
     }
     checkPreMeetingClock();
     if (!yeartextWatcherPaused.value) {

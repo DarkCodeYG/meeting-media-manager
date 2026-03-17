@@ -878,13 +878,13 @@ const { data: yeartext } = useBroadcastChannel<
   name: 'yeartext',
 });
 
-const { data: currentLang } = useBroadcastChannel<string, string>({
-  name: 'current-lang',
-});
-
-// Receive writing script from main layout for yeartext font selection
+// Receive writing script and lang code from main layout for yeartext font selection
 const { data: currentScript } = useBroadcastChannel<string, string>({
   name: 'current-script',
+});
+
+const { data: currentLang } = useBroadcastChannel<string, string>({
+  name: 'current-lang',
 });
 
 const yeartextFontFamily = ref('');
