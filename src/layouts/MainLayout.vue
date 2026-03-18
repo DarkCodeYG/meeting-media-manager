@@ -1044,7 +1044,7 @@ watchImmediate(
 
     if (shouldRun) {
       getJwMepsInfo();
-      setElementFont('JW-Icons');
+      setElementFont('jw-icons-all');
     }
 
     // Update previous state
@@ -1067,6 +1067,7 @@ watchImmediate(
   },
 );
 
+// FORK-MERGE: 포크 전용 - pre-meeting clock. 충돌 시 이 블록 유지.
 // Send pre-meeting clock remaining seconds to the media player page
 // 0 = hidden, >0 = remaining seconds before meeting start (max 300)
 const { post: postPreMeetingClock } = useBroadcastChannel<number, number>({

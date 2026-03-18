@@ -476,22 +476,20 @@
                   {{ t('repeat') }}
                 </q-tooltip>
               </q-icon>
-              <q-badge
-                v-if="
-                  currentSettings?.enablePlaybackSpeedControl &&
-                  playbackRate !== 1 &&
-                  (media.isVideo || media.isAudio)
-                "
-                class="cursor-pointer"
-                color="warning"
-                rounded
-                @click.stop="resetPlaybackRate()"
+              <!-- FORK-MERGE: 업스트림 방식 채택 - 현재 인스턴스에만 표시(로컬 ref). 충돌 시 upstream 유지. -->
+              <q-btn
+                v-if="playbackRate !== 1"
+                color="negative"
+                icon="mmm-playback-speed"
+                outline
+                round
+                size="sm"
+                @click.stop="changePlaybackRate(0, true)"
               >
-                x{{ playbackRate }}
                 <q-tooltip :delay="500">
-                  {{ t('reset-playback-speed') }}
+                  {{ t('playback-rate') }}
                 </q-tooltip>
-              </q-badge>
+              </q-btn>
             </div>
           </div>
         </div>
@@ -844,7 +842,7 @@
               clickable
             >
               <q-item-section avatar>
-                <q-icon name="mmm-media-settings" />
+                <q-icon name="mmm-playback-speed" />
               </q-item-section>
               <q-item-section>
                 <q-item-label>{{ t('playback-speed') }}</q-item-label>
@@ -859,45 +857,30 @@
                     icon="mmm-minus"
                     round
                     size="sm"
-                    @click.stop="changePlaybackRate('down')"
+                    @click.stop="changePlaybackRate(-1)"
                   />
                   <span
                     class="text-caption text-weight-bold"
                     style="min-width: 36px; text-align: center"
+                    @click.stop="changePlaybackRate(0, true)"
                   >
                     x{{ playbackRate }}
                   </span>
+                  <!-- FORK-MERGE: 프리셋 마지막(15) = 최대. 충돌 시 이 값 유지. -->
                   <q-btn
                     color="grey-7"
                     dense
-                    :disable="playbackRate >= 16"
+                    :disable="playbackRate >= 15"
                     flat
                     icon="mmm-plus"
                     round
                     size="sm"
-                    @click.stop="changePlaybackRate('up')"
+                    @click.stop="changePlaybackRate(1)"
                   />
                 </div>
               </q-item-section>
             </q-item>
-            <q-item
-              v-if="
-                currentSettings?.enablePlaybackSpeedControl &&
-                playbackRate !== 1 &&
-                isCurrentlyPlaying &&
-                (media.isVideo || media.isAudio)
-              "
-              v-close-popup
-              clickable
-              @click="resetPlaybackRate()"
-            >
-              <q-item-section avatar>
-                <q-icon name="mmm-media-settings" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>{{ t('reset-playback-speed') }}</q-item-label>
-              </q-item-section>
-            </q-item>
+            <!-- FORK-MERGE: 업스트림이 별도 리셋 메뉴 항목 제거 (속도 숫자 클릭으로 리셋). 충돌 시 upstream 유지(이 주석 아래 q-item만 유지). -->
             <q-item
               v-if="media.source === 'additional'"
               v-close-popup
@@ -1129,7 +1112,6 @@ import BaseDialog from 'components/dialog/BaseDialog.vue';
 import { storeToRefs } from 'pinia';
 import { type QBtn, type QImg, QItem, useQuasar } from 'quasar';
 import { useMediaSectionRepeat } from 'src/composables/useMediaSectionRepeat';
-import { playbackRate } from 'src/composables/usePlaybackRate';
 import { FOOTNOTE_TARGET_PARAGRAPH } from 'src/constants/jw';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { getThumbnailUrl } from 'src/helpers/fs';
@@ -1714,21 +1696,33 @@ const saveMediaDuration = () => {
 
 const { post } = useBroadcastChannel<number, number>({ name: 'seek-to' });
 
+// FORK-MERGE: 업스트림 방식(로컬 ref) 채택. 포크의 composable 방식 제거.
+// 충돌 시: playbackRate는 로컬 ref 유지, changePlaybackRate는 프리셋 배열 방식 유지.
+const playbackRate = ref(1);
+
 const { post: postPlaybackRate } = useBroadcastChannel<number, number>({
   name: 'playback-rate',
 });
 
-const changePlaybackRate = (direction: 'down' | 'up') => {
-  if (direction === 'up') {
-    playbackRate.value = Math.min(16, playbackRate.value * 2);
-  } else {
-    playbackRate.value = Math.max(0.5, playbackRate.value / 2);
+// FORK-MERGE: 프리셋 배열 방식. delta=+1 → 다음 단계, delta=-1 → 이전 단계, reset=true → 1로 초기화.
+// 프리셋: [0.5, 1, 1.1, 1.2, 2, 5, 15]
+const PLAYBACK_RATE_PRESETS = [0.5, 1, 1.1, 1.2, 2, 5, 15];
+
+const changePlaybackRate = (delta: number, reset = false) => {
+  if (reset) {
+    playbackRate.value = 1;
+    postPlaybackRate(playbackRate.value);
+    return;
   }
+  const currentIndex = PLAYBACK_RATE_PRESETS.indexOf(playbackRate.value);
+  const baseIndex =
+    currentIndex === -1 ? PLAYBACK_RATE_PRESETS.indexOf(1) : currentIndex;
+  const newIndex = Math.max(
+    0,
+    Math.min(PLAYBACK_RATE_PRESETS.length - 1, baseIndex + delta),
+  );
+  playbackRate.value = PLAYBACK_RATE_PRESETS[newIndex] ?? 1;
   postPlaybackRate(playbackRate.value);
-};
-const resetPlaybackRate = () => {
-  playbackRate.value = 1;
-  postPlaybackRate(1);
 };
 
 const seekTo = (newSeekTo: null | number) => {
@@ -1761,6 +1755,8 @@ function stopMedia(forOtherMediaItem = false) {
   };
   mediaToStop.value = '';
   localFile.value = fileIsLocal();
+  playbackRate.value = 1;
+  postPlaybackRate(1);
 
   if (!forOtherMediaItem) {
     // Stop Zoom screen sharing when media is stopped (unless it's a media switch instead of a stop)
@@ -1777,6 +1773,13 @@ const isCurrentlyPlaying = computed(() => {
       mediaPlaying.value.url === props.media.streamUrl) &&
     mediaPlaying.value.uniqueId === props.media.uniqueId
   );
+});
+
+watch(isCurrentlyPlaying, (playing) => {
+  if (!playing && playbackRate.value !== 1) {
+    playbackRate.value = 1;
+    postPlaybackRate(1);
+  }
 });
 
 const mediaPan = ref<{ x: number; y: number }>({

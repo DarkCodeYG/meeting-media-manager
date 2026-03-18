@@ -19,7 +19,8 @@ export interface CacheList<T = unknown> {
 
 export type FontName =
   | 'AbyssinicaSIL'
-  | 'JW-Icons'
+  // FORK-MERGE: 업스트림 변경 반영 - 충돌 시 upstream 버전('jw-icons-all') 유지
+  | 'jw-icons-all'
   | 'NotoNaskhArabic'
   | 'NotoNastaliqUrdu'
   | 'NotoSans'

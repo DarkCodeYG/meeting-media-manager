@@ -27,6 +27,7 @@
         :style="yeartextFontStyle"
         v-html="sanitize(yeartext || '')"
       />
+      <!-- FORK-MERGE: 포크 전용 - pre-meeting clock UI. 충돌 시 이 블록 유지. -->
       <div v-if="showPreMeetingClock" id="preMeetingClockContainer">
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div id="preMeetingClock" v-html="formattedCurrentTime" />
@@ -201,8 +202,6 @@ import { useI18n } from 'vue-i18n';
 const { sanitize } = DOMPurify;
 
 const { t } = useI18n();
-
-const jwStore = useJwStore();
 
 const { getScreenAccessStatus, PLATFORM } = globalThis.electronApi;
 
@@ -696,6 +695,9 @@ const playMedia = () => {
       currentMediaElement.value.playbackRate = playbackRateData.value;
     }
     currentMediaElement.value.currentTime = customMin.value;
+    if (playbackRateData.value) {
+      currentMediaElement.value.playbackRate = playbackRateData.value;
+    }
     playMediaElement();
   } catch (e) {
     errorCatcher(e);
@@ -878,15 +880,15 @@ const { data: yeartext } = useBroadcastChannel<
   name: 'yeartext',
 });
 
-// Receive writing script and lang code from main layout for yeartext font selection
+// Receive current writing script and language code for yeartext font selection
 const { data: currentScript } = useBroadcastChannel<string, string>({
   name: 'current-script',
 });
-
 const { data: currentLang } = useBroadcastChannel<string, string>({
   name: 'current-lang',
 });
 
+const jwStore = useJwStore();
 const yeartextFontFamily = ref('');
 
 watch(
@@ -898,6 +900,7 @@ watch(
     ] as const,
   async ([script, lang]) => {
     if (script && urlVariables.value?.mediator) {
+      // Sync urlVariables to jw store for CDN font URL resolution
       if (urlVariables.value.base) {
         jwStore.$patch({
           urlVariables: {
@@ -907,10 +910,7 @@ watch(
           },
         });
       }
-      yeartextFontFamily.value = await loadYeartextFont(
-        script,
-        lang || undefined,
-      );
+      yeartextFontFamily.value = await loadYeartextFont(script, lang);
     }
   },
 );
@@ -921,6 +921,7 @@ const yeartextFontStyle = computed(() =>
     : undefined,
 );
 
+// FORK-MERGE: 포크 전용 - pre-meeting clock 로직. 충돌 시 이 블록 유지.
 const { data: preMeetingClockRemaining } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
 });
@@ -980,7 +981,6 @@ watch(showPreMeetingClock, (show) => {
     }
   }
 });
-
 watchDeep(
   () => zoomPanState.value,
   (newZoomPanState) => {
@@ -1162,10 +1162,10 @@ const loadFonts = async () => {
   }
 
   try {
-    jwIconsFontLoaded.value = await setElementFont('JW-Icons');
+    jwIconsFontLoaded.value = await setElementFont('jw-icons-all');
   } catch (e) {
     errorCatcher(e, {
-      contexts: { fn: { fontName: 'JW-Icons', name: 'loadFonts' } },
+      contexts: { fn: { fontName: 'jw-icons-all', name: 'loadFonts' } },
     });
     jwIconsFontLoaded.value = false;
   }

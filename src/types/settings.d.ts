@@ -215,6 +215,7 @@ export interface SettingsValues {
   enableMusicButton: boolean;
   enablePinyinSongs: boolean;
   enablePlaybackSpeedControl: boolean;
+  // FORK-MERGE: 포크 전용 기능 - 업스트림에 없음. 충돌 시 포크 버전 유지.
   enablePreMeetingClock: boolean;
   enablePublicTalkTitle: boolean;
   enableSubtitles: boolean;

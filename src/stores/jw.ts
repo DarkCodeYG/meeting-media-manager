@@ -90,8 +90,10 @@ interface Store {
   lookupPeriod: Partial<Record<string, DateInfo[]>>;
   memorials: Partial<Record<number, `${number}/${number}/${number}`>>;
   urlVariables: UrlVariables;
+  // FORK-MERGE: yeartextFontOverrides는 포크 전용(언어별 폰트 오버라이드). 충돌 시 포크 버전 유지.
+  // yeartextFontUrls 타입은 업스트림의 FontName 타입 사용.
   yeartextFontOverrides: Record<string, string>;
-  yeartextFontUrls: Partial<Record<string, string>>;
+  yeartextFontUrls: Partial<Record<FontName, string>>;
   yeartexts: Partial<Record<number, Partial<Record<JwLangCode, string>>>>;
 }
 
@@ -230,14 +232,14 @@ function extractCssUrls(html: string, baseUrl: string): string[] {
 }
 
 /**
- * Finds the jw-icons-external font URL within CSS text
+ * Finds the jw-icons font URL within CSS text
  */
 function findIconUrlInCss(cssText: string, cssUrl: string): null | string {
   const fontFaceBlocks = cssText.match(/@font-face\s*\{[^}]*\}/gi);
   if (!fontFaceBlocks) return null;
 
   for (const block of fontFaceBlocks) {
-    if (block.includes('jw-icons-external')) {
+    if (block.includes('jw-icons')) {
       const fontMatch = new RegExp(
         /url\(["']?([^"']+\.(woff2?|ttf|otf)[^"']*)["']?\)/i,
       ).exec(block);
@@ -267,61 +269,6 @@ function findYeartextFontOverridesInCss(
     const fontFamily = match[3]?.trim().replace(/;$/, '');
     if (script && lang && fontFamily) {
       result[`${script}.${lang}`] = fontFamily;
-    }
-  }
-  return result;
-}
-
-/**
- * Maps CSS font-family names (as found in JW.org CSS) to our FontName values.
- * Only includes fonts that need to be fetched from JW CDN.
- */
-const CSS_FONT_TO_FONTNAME: Record<string, FontName> = {
-  WTClearTextGeorgian: 'WTClearTextGeorgian',
-  WTClearTextJapanese: 'WTClearTextJapanese',
-  WTMannaSansKaren: 'WTMannaSansKaren',
-  WTMannaSansMongolian: 'WTMannaSansMongolian',
-  WTMannaSansMyammar: 'WTMannaSansMyanmar', // CSS uses 'Myammar' (double m)
-  WTMannaSansTibetan: 'WTMannaSansTibetan',
-  WTSetthaSpecial: 'WTSetthaSpecial',
-  WTTextNew: 'WTTextNew',
-  WTUKIJSpecial: 'WTUKIJSpecial',
-  WTXBZSpecial: 'WTXBZSpecial',
-};
-
-/**
- * Finds yeartext CDN font URLs within CSS text by parsing @font-face blocks.
- * Only extracts fonts matching the JW/WT/Manna naming convention.
- */
-function findYeartextFontUrlsInCss(
-  cssText: string,
-  cssUrl: string,
-): Record<string, string> {
-  const result: Record<string, string> = {};
-  const fontFaceBlocks = cssText.match(/@font-face\s*\{[^}]*\}/gi);
-  if (!fontFaceBlocks) return result;
-
-  for (const block of fontFaceBlocks) {
-    const familyMatch = /font-family:\s*["']?([^"';,}]+)["']?/i.exec(block);
-    if (!familyMatch?.[1]) continue;
-    const cssFamily = familyMatch[1].trim();
-
-    const fontName = CSS_FONT_TO_FONTNAME[cssFamily];
-    if (!fontName || result[fontName]) continue;
-
-    // Only take regular weight (400) or first occurrence
-    const weightMatch = /font-weight:\s*(\d+)/i.exec(block);
-    const weight = weightMatch?.[1] || '400';
-    if (weight !== '400') continue;
-
-    const urlMatch =
-      /url\(["']?([^"')]+\.(?:woff2|woff|otf|ttf)[^"']*)["']?\)/i.exec(block);
-    if (urlMatch?.[1]) {
-      try {
-        result[fontName] = new URL(urlMatch[1], cssUrl).href;
-      } catch {
-        result[fontName] = urlMatch[1];
-      }
     }
   }
   return result;
@@ -725,28 +672,62 @@ export const useJwStore = defineStore('jw-store', {
     },
     async updateYeartextFontUrls() {
       try {
-        const baseUrl = this.urlVariables.base;
-        if (!baseUrl) return;
-
-        const jwUrl = `https://www.${baseUrl}/en/`;
-        const response = await fetchRaw(jwUrl, undefined, true);
+        // FORK-MERGE: 업스트림이 WOL URL로 변경 (더 안정적). 충돌 시 upstream URL 유지.
+        const wolUrl = `https://wol.${this.urlVariables.base}/en/wol/h/r1/lp-e`;
+        const response = await fetchRaw(wolUrl, undefined, true);
         if (!response.ok) return;
 
         const html = await response.text();
-        const cssUrls = extractCssUrls(html, baseUrl);
+        const cssUrls = extractCssUrls(html, this.urlVariables.base);
+
+        // WT/JW/Manna font names to search for in CSS @font-face declarations
+        const wtFontCssNames: Record<string, FontName> = {
+          WTClearTextGeorgian: 'WTClearTextGeorgian',
+          WTClearTextJapanese: 'WTClearTextJapanese',
+          WTMannaSansKaren: 'WTMannaSansKaren',
+          WTMannaSansMongolian: 'WTMannaSansMongolian',
+          WTMannaSansMyammar: 'WTMannaSansMyanmar', // CSS typo in JW.org
+          WTMannaSansMyanmar: 'WTMannaSansMyanmar',
+          WTMannaSansTibetan: 'WTMannaSansTibetan',
+          WTSetthaSpecial: 'WTSetthaSpecial',
+          WTTextNew: 'WTTextNew',
+          WTXBZSpecial: 'WTXBZSpecial',
+        };
 
         for (const cssUrl of cssUrls) {
           try {
             const cssResponse = await fetchRaw(cssUrl, undefined, true);
             if (!cssResponse.ok) continue;
             const cssText = await cssResponse.text();
-            const found = findYeartextFontUrlsInCss(cssText, cssUrl);
-            if (Object.keys(found).length > 0) {
-              this.yeartextFontUrls = {
-                ...this.yeartextFontUrls,
-                ...found,
-              };
+            // FORK-MERGE: 업스트림의 인라인 CSS 파싱 + 포크의 언어별 override 유지.
+            // 충돌 시: wtFontCssNames 파싱은 upstream, findYeartextFontOverridesInCss는 포크 유지.
+
+            // Parse @font-face blocks for WT fonts (upstream approach)
+            const fontFaceRegex =
+              /@font-face\s*\{[^}]*font-family:\s*['"]?(\w+)['"]?[^}]*\}/g;
+            let match;
+            while ((match = fontFaceRegex.exec(cssText)) !== null) {
+              const cssName = match[1];
+              if (!cssName) continue;
+
+              const fontName = wtFontCssNames[cssName];
+              if (!fontName) continue;
+
+              // Extract woff2 URL, falling back to woff
+              const block = match[0];
+              const woff2Match = new RegExp(
+                /url\(["']?(https?:\/\/[^"')]+\.woff2)["']?\)/,
+              ).exec(block);
+              const woffMatch = new RegExp(
+                /url\(["']?(https?:\/\/[^"')]+\.woff)["']?\)/,
+              ).exec(block);
+              const url = woff2Match?.[1] || woffMatch?.[1];
+              if (url) {
+                this.yeartextFontUrls[fontName] = url;
+              }
             }
+
+            // FORK-MERGE: 포크 전용 - 언어별 폰트 오버라이드 파싱. 충돌 시 포크 버전 유지.
             const overrides = findYeartextFontOverridesInCss(cssText);
             if (Object.keys(overrides).length > 0) {
               this.yeartextFontOverrides = {
@@ -757,22 +738,14 @@ export const useJwStore = defineStore('jw-store', {
           } catch (e) {
             errorCatcher(e, {
               contexts: {
-                fn: {
-                  args: { cssUrl },
-                  name: 'updateYeartextFontUrls - cssUrl',
-                },
+                fn: { args: { cssUrl }, name: 'updateYeartextFontUrls' },
               },
             });
           }
         }
       } catch (e) {
         errorCatcher(e, {
-          contexts: {
-            fn: {
-              args: {},
-              name: 'updateYeartextFontUrls - main',
-            },
-          },
+          contexts: { fn: { name: 'updateYeartextFontUrls - main' } },
         });
       }
     },
@@ -794,17 +767,15 @@ export const useJwStore = defineStore('jw-store', {
         }
       };
 
+      // FORK-MERGE: 업스트림이 @latest 추가, 폰트명/경로 수정. 충돌 시 upstream 유지.
       const jsdelivr = (font: string, file: string) =>
-        `https://cdn.jsdelivr.net/fontsource/fonts/${font}/${file}`;
+        `https://cdn.jsdelivr.net/fontsource/fonts/${font}@latest/${file}`;
 
       return {
-        AbyssinicaSIL: jsdelivr(
-          'abyssinica-sil',
-          '400-normal/latin-400-normal.woff2',
-        ),
-        'JW-Icons':
+        AbyssinicaSIL: jsdelivr('abyssinica-sil', 'latin-400-normal.woff2'),
+        'jw-icons-all':
           state.jwIconsUrl ||
-          getFontUrl('base', '/assets/fonts/jw-icons-external-d876da3.woff'),
+          getFontUrl('base', '/assets/fonts/jw-icons-all-81d446b.woff'),
         NotoNaskhArabic: jsdelivr(
           'noto-naskh-arabic:vf',
           'arabic-wght-normal.woff2',
@@ -832,7 +803,8 @@ export const useJwStore = defineStore('jw-store', {
         ),
         NotoSansSC: jsdelivr(
           'noto-sans-sc',
-          '400-normal/chinese-simplified-400-normal.woff2',
+          // FORK-MERGE: 업스트림이 경로 수정 (400-normal/ 제거, woff2→woff). 충돌 시 upstream 유지.
+          'chinese-simplified-400-normal.woff',
         ),
         NotoSansTamil: jsdelivr(
           'noto-sans-tamil:vf',
@@ -840,7 +812,8 @@ export const useJwStore = defineStore('jw-store', {
         ),
         NotoSansTC: jsdelivr(
           'noto-sans-tc',
-          '400-normal/chinese-traditional-400-normal.woff2',
+          // FORK-MERGE: 업스트림이 경로 수정 (400-normal/ 제거, woff2→woff). 충돌 시 upstream 유지.
+          'chinese-traditional-400-normal.woff',
         ),
         NotoSansTelugu: jsdelivr(
           'noto-sans-telugu:vf',
@@ -882,8 +855,7 @@ export const useJwStore = defineStore('jw-store', {
           'mediator',
           '/fonts/wt-clear-text/1.029/Wt-ClearText-Bold.woff2',
         ),
-        // Dynamically discovered yeartext CDN fonts (WT/JW/Manna)
-        ...(state.yeartextFontUrls as Partial<Record<FontName, string>>),
+        ...state.yeartextFontUrls,
       } as Record<FontName, string>;
     },
   },
@@ -925,8 +897,9 @@ export const useJwStore = defineStore('jw-store', {
         mediator: 'https://b.jw-cdn.org/apis/mediator',
         pubMedia: 'https://b.jw-cdn.org/apis/pub-media/GETPUBMEDIALINKS',
       },
+      // FORK-MERGE: yeartextFontOverrides는 포크 전용. 충돌 시 두 줄 모두 유지.
       yeartextFontOverrides: {},
-      yeartextFontUrls: {},
+      yeartextFontUrls: {} as Partial<Record<FontName, string>>,
       yeartexts: {},
     };
   },
