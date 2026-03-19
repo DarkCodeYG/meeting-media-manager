@@ -175,6 +175,7 @@
   "enablePublicTalkTitle": "Show talk title on media display",
   "enablePublicTalkTitle-explain": "When enabled, a text input and play button will appear in the public talk and circuit overseer sections, allowing you to display the talk title on the media window.",
   "playback-speed": "Playback speed",
+  "reset-playback-speed": "Reset playback speed",
   "talk-title": "Talk title",
   "enableMusicButton": "Enable background music playback",
   "enableMusicButton-explain": "Play songs before and after the meetings with only a few clicks.",

@@ -476,6 +476,22 @@
                   {{ t('repeat') }}
                 </q-tooltip>
               </q-icon>
+              <q-badge
+                v-if="
+                  currentSettings?.enablePlaybackSpeedControl &&
+                  playbackRate !== 1 &&
+                  (media.isVideo || media.isAudio)
+                "
+                class="cursor-pointer"
+                color="warning"
+                rounded
+                @click.stop="resetPlaybackRate()"
+              >
+                x{{ playbackRate }}
+                <q-tooltip :delay="500">
+                  {{ t('reset-playback-speed') }}
+                </q-tooltip>
+              </q-badge>
             </div>
           </div>
         </div>
@@ -843,25 +859,43 @@
                     icon="mmm-minus"
                     round
                     size="sm"
-                    @click.stop="changePlaybackRate(-0.1)"
+                    @click.stop="changePlaybackRate('down')"
                   />
                   <span
                     class="text-caption text-weight-bold"
                     style="min-width: 36px; text-align: center"
                   >
-                    x{{ playbackRate.toFixed(1) }}
+                    x{{ playbackRate }}
                   </span>
                   <q-btn
                     color="grey-7"
                     dense
-                    :disable="playbackRate >= 5.0"
+                    :disable="playbackRate >= 16"
                     flat
                     icon="mmm-plus"
                     round
                     size="sm"
-                    @click.stop="changePlaybackRate(0.1)"
+                    @click.stop="changePlaybackRate('up')"
                   />
                 </div>
+              </q-item-section>
+            </q-item>
+            <q-item
+              v-if="
+                currentSettings?.enablePlaybackSpeedControl &&
+                playbackRate !== 1 &&
+                isCurrentlyPlaying &&
+                (media.isVideo || media.isAudio)
+              "
+              v-close-popup
+              clickable
+              @click="resetPlaybackRate()"
+            >
+              <q-item-section avatar>
+                <q-icon name="mmm-media-settings" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ t('reset-playback-speed') }}</q-item-label>
               </q-item-section>
             </q-item>
             <q-item
@@ -1095,6 +1129,7 @@ import BaseDialog from 'components/dialog/BaseDialog.vue';
 import { storeToRefs } from 'pinia';
 import { type QBtn, type QImg, QItem, useQuasar } from 'quasar';
 import { useMediaSectionRepeat } from 'src/composables/useMediaSectionRepeat';
+import { playbackRate } from 'src/composables/usePlaybackRate';
 import { FOOTNOTE_TARGET_PARAGRAPH } from 'src/constants/jw';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { getThumbnailUrl } from 'src/helpers/fs';
@@ -1683,12 +1718,17 @@ const { post: postPlaybackRate } = useBroadcastChannel<number, number>({
   name: 'playback-rate',
 });
 
-const playbackRate = ref(1);
-
-const changePlaybackRate = (delta: number) => {
-  const newRate = Math.round((playbackRate.value + delta) * 10) / 10;
-  playbackRate.value = Math.min(5.0, Math.max(0.5, newRate));
+const changePlaybackRate = (direction: 'down' | 'up') => {
+  if (direction === 'up') {
+    playbackRate.value = Math.min(16, playbackRate.value * 2);
+  } else {
+    playbackRate.value = Math.max(0.5, playbackRate.value / 2);
+  }
   postPlaybackRate(playbackRate.value);
+};
+const resetPlaybackRate = () => {
+  playbackRate.value = 1;
+  postPlaybackRate(1);
 };
 
 const seekTo = (newSeekTo: null | number) => {
@@ -1709,8 +1749,6 @@ const zoomReset = (forced = false) => {
 };
 
 function stopMedia(forOtherMediaItem = false) {
-  playbackRate.value = 1;
-  postPlaybackRate(1);
   mediaPlaying.value = {
     action: '',
     currentPosition: 0,
@@ -1739,13 +1777,6 @@ const isCurrentlyPlaying = computed(() => {
       mediaPlaying.value.url === props.media.streamUrl) &&
     mediaPlaying.value.uniqueId === props.media.uniqueId
   );
-});
-
-watch(isCurrentlyPlaying, (playing) => {
-  if (!playing && playbackRate.value !== 1) {
-    playbackRate.value = 1;
-    postPlaybackRate(1);
-  }
 });
 
 const mediaPan = ref<{ x: number; y: number }>({
