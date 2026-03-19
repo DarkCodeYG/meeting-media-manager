@@ -9,6 +9,7 @@ import { moveAdditionalMediaMaps } from './move-additional-media';
 import { moveCacheToMachineWide } from './move-cache-to-machine-wide';
 import { newMediaSections } from './new-media-sections';
 import { refreshDynamicMedia } from './refresh-dynamic-media';
+import { removeLegacyJwIconsFont } from './remove-legacy-jw-icons-font';
 import { resetYeartextPreview2026 } from './reset-yeartext-preview-2026';
 
 // In the migration registry, the version is the one that was live when the migration was added
@@ -26,6 +27,7 @@ export const MIGRATION_REGISTRY: Record<string, MigrationFunction> = {
   '26.1.1 autoEnrollMeetingSync': autoEnrollMeetingSync,
   '26.1.6 refreshDynamicMedia': refreshDynamicMedia,
   '26.1.7 refreshDynamicMedia': refreshDynamicMedia,
+  '26.3.1-custom.0 removeLegacyJwIconsFont': removeLegacyJwIconsFont,
   addBaseUrlToAllCongregations,
   firstRun,
   localStorageToPiniaPersist,
