@@ -160,6 +160,7 @@ export type SettingsItemRule = 'notEmpty' | 'portNumber' | 'regular';
 export type SettingsItems = Record<keyof SettingsValues, SettingsItem>;
 
 export type SettingsItemSubgroup =
+  | 'bethelSpeakerVisit'
   | 'cache'
   | 'customEvents'
   | 'dangerZone'
@@ -191,6 +192,8 @@ export interface SettingsValues {
   autoStartMusic: boolean;
   baseUrl: string;
   beginPlaybackPaused: boolean;
+  bethelSpeakerDate: `${number}/${number}/${number}` | null;
+  bethelSpeakerServiceTalkTime: `${number}:${number}` | null;
   cacheFolder: null | string;
   congregationName: null | string;
   congregationNameModified: boolean;

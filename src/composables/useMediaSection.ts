@@ -55,7 +55,8 @@ export function useMediaSection(mediaList: MediaSectionWithConfig) {
       mediaList.config?.uniqueId.startsWith('custom-') ||
       mediaList.config?.uniqueId === 'pt' ||
       mediaList.config?.uniqueId === 'circuit-overseer' ||
-      mediaList.config?.uniqueId === 'lac'
+      mediaList.config?.uniqueId === 'lac' ||
+      mediaList.config?.uniqueId === 'service-talk'
     );
   });
 
@@ -63,9 +64,11 @@ export function useMediaSection(mediaList: MediaSectionWithConfig) {
   const isSongButton = computed(() => {
     if (!mediaList.config) return false;
     if (someItemsAreHidden.value) return false;
-    const sectionSometimesContainSongs = ['circuit-overseer', 'pt'].includes(
-      mediaList.config.uniqueId,
-    );
+    const sectionSometimesContainSongs = [
+      'circuit-overseer',
+      'pt',
+      'service-talk',
+    ].includes(mediaList.config.uniqueId);
     return !sectionContainsSongs.value && sectionSometimesContainSongs;
   });
 

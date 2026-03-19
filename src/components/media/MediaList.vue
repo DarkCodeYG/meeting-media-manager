@@ -33,7 +33,8 @@
       v-if="
         currentSettings?.enablePublicTalkTitle &&
         (mediaList.config?.uniqueId === 'pt' ||
-          mediaList.config?.uniqueId === 'circuit-overseer')
+          mediaList.config?.uniqueId === 'circuit-overseer' ||
+          mediaList.config?.uniqueId === 'service-talk')
       "
       :is-public-talk="mediaList.config?.uniqueId === 'pt'"
       :media-list="mediaList"

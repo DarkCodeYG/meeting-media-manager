@@ -28,7 +28,12 @@ import {
   MAX_SONGS,
 } from 'src/constants/jw';
 import mepslangs from 'src/constants/mepslangs';
-import { isCoWeek, isMwMeetingDay, isWeMeetingDay } from 'src/helpers/date';
+import {
+  isBethelSpeakerDate,
+  isCoWeek,
+  isMwMeetingDay,
+  isWeMeetingDay,
+} from 'src/helpers/date';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { exportAllDays } from 'src/helpers/export-media';
 import {
@@ -541,6 +546,10 @@ export const fetchMedia = async () => {
           async (day, index) => {
             // Skip non-meeting days entirely
             if (!getMeetingType(day.date)) {
+              // But create sections for Bethel speaker visit date
+              if (isBethelSpeakerDate(day.date)) {
+                createMeetingSections(day);
+              }
               return null;
             }
 

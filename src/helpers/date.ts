@@ -202,6 +202,21 @@ export const isWeMeetingDay = (lookupDate?: Date) => {
   }
 };
 
+export const isBethelSpeakerDate = (lookupDate?: Date | string) => {
+  try {
+    const currentState = useCurrentStateStore();
+    const bethelSpeakerDate = currentState.currentSettings?.bethelSpeakerDate;
+    if (!lookupDate || !bethelSpeakerDate) return false;
+    return datesAreSame(
+      dateFromString(lookupDate),
+      dateFromString(bethelSpeakerDate),
+    );
+  } catch (error) {
+    errorCatcher(error);
+    return false;
+  }
+};
+
 export const isMeetingDay = (lookupDate?: Date) => {
   try {
     const currentState = useCurrentStateStore();
@@ -425,8 +440,10 @@ export const remainingTimeBeforeMeetingStart = () => {
     const meetingDay =
       !!currentState.isSelectedDayToday &&
       !!currentState.selectedDayMeetingType;
+    const now = new Date();
+    let meetingStartTime: null | string | undefined = null;
+
     if (meetingDay) {
-      const now = new Date();
       const weMeeting = currentState.selectedDayMeetingType === 'we';
       const meetingStartTimes = shouldUseChangedMeetingSchedule(now)
         ? {
@@ -441,16 +458,17 @@ export const remainingTimeBeforeMeetingStart = () => {
             mw: currentState.currentSettings?.mwStartTime,
             we: currentState.currentSettings?.weStartTime,
           };
-      const meetingStartTime = meetingStartTimes[weMeeting ? 'we' : 'mw'];
-      if (!meetingStartTime) return 0;
-      const [hours, minutes] = meetingStartTime.split(':').map(Number);
-      const meetingStartDateTime = new Date(now);
-      meetingStartDateTime.setHours(hours ?? 0, minutes, 0, 0);
-      const dateDiff = getDateDiff(meetingStartDateTime, now, 'seconds');
-      return dateDiff;
-    } else {
-      return 0;
+      meetingStartTime = meetingStartTimes[weMeeting ? 'we' : 'mw'];
+    } else if (currentState.isSelectedDayToday && isBethelSpeakerDate(now)) {
+      meetingStartTime =
+        currentState.currentSettings?.bethelSpeakerServiceTalkTime;
     }
+
+    if (!meetingStartTime) return 0;
+    const [hours, minutes] = meetingStartTime.split(':').map(Number);
+    const meetingStartDateTime = new Date(now);
+    meetingStartDateTime.setHours(hours ?? 0, minutes, 0, 0);
+    return getDateDiff(meetingStartDateTime, now, 'seconds');
   } catch (error) {
     errorCatcher(error);
     return 0;

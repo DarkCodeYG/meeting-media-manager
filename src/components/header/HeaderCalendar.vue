@@ -440,7 +440,12 @@ import DialogStudyBible from 'components/dialog/DialogStudyBible.vue';
 import { storeToRefs } from 'pinia';
 import { useLocale } from 'src/composables/useLocale';
 import { SORTER } from 'src/constants/general';
-import { isCoWeek, isMemorialDay, isWeMeetingDay } from 'src/helpers/date';
+import {
+  isBethelSpeakerDate,
+  isCoWeek,
+  isMemorialDay,
+  isWeMeetingDay,
+} from 'src/helpers/date';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import {
   addJwpubDocumentMediaToFiles,
@@ -606,7 +611,9 @@ const getEventDates = () => {
     if (!lookupPeriod.value || !currentCongregation.value) return [];
     const meetingDates =
       lookupPeriod.value[currentCongregation.value]
-        ?.filter((day) => getMeetingType(day.date))
+        ?.filter(
+          (day) => getMeetingType(day.date) || isBethelSpeakerDate(day.date),
+        )
         .map((day) => formatDate(day.date, 'YYYY/MM/DD')) || [];
     return meetingDates.concat(additionalMediaDates.value);
   } catch (error) {

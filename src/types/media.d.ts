@@ -122,6 +122,7 @@ export type MediaSectionIdentifier =
   | 'imported-media'
   | 'lac'
   | 'pt'
+  | 'service-talk'
   | 'tgw'
   | 'wt'
   | string;

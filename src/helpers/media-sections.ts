@@ -9,6 +9,7 @@ import type {
 import { getMeetingSections, standardSections } from 'src/constants/media';
 import { isCoWeek } from 'src/helpers/date';
 import { useCurrentStateStore } from 'src/stores/current-state';
+import { dateFromString, datesAreSame } from 'src/utils/date';
 
 import { errorCatcher } from './error-catcher';
 
@@ -175,6 +176,14 @@ function getMeetingSectionConfigs(
     };
   }
 
+  // service-talk uses the same fixed color as other standard meeting sections
+  if (section === 'service-talk') {
+    return {
+      bgColor: defaultAdditionalSection.config.bgColor,
+      uniqueId: section,
+    };
+  }
+
   // Fallback for unknown sections
   return {
     bgColor: getRandomColor(),
@@ -212,6 +221,23 @@ export const createMeetingSections = (day: DateInfo) => {
       mediaSection.config.publicTalkTitle = publicTalkTitle;
     }
   });
+
+  // Add service-talk section on Bethel speaker visit date
+  const bethelSpeakerDate = currentState.currentSettings?.bethelSpeakerDate;
+  if (
+    bethelSpeakerDate &&
+    datesAreSame(day.date, dateFromString(bethelSpeakerDate))
+  ) {
+    const serviceTalkSection = getOrCreateMediaSection(
+      day.mediaSections,
+      'service-talk',
+    );
+    const { publicTalkTitle } = serviceTalkSection.config;
+    serviceTalkSection.config = getMeetingSectionConfigs('service-talk');
+    if (publicTalkTitle) {
+      serviceTalkSection.config.publicTalkTitle = publicTalkTitle;
+    }
+  }
 };
 
 export const getSectionBgColor = (section: MediaSection | undefined) => {

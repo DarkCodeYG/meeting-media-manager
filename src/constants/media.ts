@@ -43,6 +43,7 @@ export const standardSections: MediaSectionIdentifier[] = [
   'ayfm',
   'circuit-overseer',
   'lac',
+  'service-talk',
   'tgw',
   'wt',
 ];

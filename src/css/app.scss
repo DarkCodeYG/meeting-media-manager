@@ -434,6 +434,7 @@ body.body--dark {
   }
 
   &.circuit-overseer:before,
+  &.service-talk:before,
   &.website:before {
     background: $additional;
   }
@@ -584,6 +585,7 @@ body.body--dark {
 .bg-circuit-overseer,
 .bg-imported-media,
 .bg-pt,
+.bg-service-talk,
 .bg-website {
   background: $additional;
 }
@@ -591,6 +593,7 @@ body.body--dark {
 .text-circuit-overseer,
 .text-imported-media,
 .text-pt,
+.text-service-talk,
 .text-website {
   color: $additional;
 }

@@ -5,7 +5,15 @@
         v-model="talkTitle"
         autogrow
         dense
-        :label="t(isPublicTalk ? 'public-talk-title' : 'talk-title')"
+        :label="
+          t(
+            sectionId === 'pt'
+              ? 'public-talk-title'
+              : sectionId === 'service-talk'
+                ? 'service-talk-title'
+                : 'talk-title',
+          )
+        "
         outlined
         style="max-width: calc(100% - 16px)"
         type="textarea"
@@ -82,12 +90,18 @@ const stopTitleDisplay = () => {
 
 const buildHtml = () => {
   const title = escapeHtml(talkTitle.value.trim()).replace(/\n/g, '<br>');
+  const lang = currentSettings.value?.lang;
+  const locale = locales.find((l) => l.langcode === lang)?.value;
   if (props.isPublicTalk) {
-    const lang = currentSettings.value?.lang;
-    const locale = locales.find((l) => l.langcode === lang)?.value;
     const subtitle = locale
       ? t('public-talk', {}, { locale })
       : t('public-talk');
+    return `<p class="pt-subtitle"><strong>${subtitle}</strong></p><p class="pt-title"><strong>${title}</strong></p>`;
+  }
+  if (sectionId === 'service-talk') {
+    const subtitle = locale
+      ? t('service-talk', {}, { locale })
+      : t('service-talk');
     return `<p class="pt-subtitle"><strong>${subtitle}</strong></p><p class="pt-title"><strong>${title}</strong></p>`;
   }
   return `<p class="pt-title"><strong>${title}</strong></p>`;

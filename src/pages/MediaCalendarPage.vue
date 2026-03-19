@@ -127,7 +127,12 @@ import { useLocale } from 'src/composables/useLocale';
 import { useMediaSectionRepeat } from 'src/composables/useMediaSectionRepeat';
 import { SORTER } from 'src/constants/general';
 import { getMeetingSections } from 'src/constants/media';
-import { isCoWeek, isMeetingDay, isWeMeetingDay } from 'src/helpers/date';
+import {
+  isBethelSpeakerDate,
+  isCoWeek,
+  isMeetingDay,
+  isWeMeetingDay,
+} from 'src/helpers/date';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { addDayToExportQueue } from 'src/helpers/export-media';
 import {
@@ -821,7 +826,11 @@ const goToNextDayWithMedia = (ignoreTodaysDate = false) => {
             const hasMedia = (day.mediaSections ?? []).some(
               (section) => !!section.items?.length,
             );
-            return getMeetingType(day.date) || hasMedia;
+            return (
+              getMeetingType(day.date) ||
+              hasMedia ||
+              isBethelSpeakerDate(day.date)
+            );
           })
           .map((day) => day.date)
           .filter(Boolean)

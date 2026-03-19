@@ -287,9 +287,21 @@ const buttonLabel = computed(() => {
   if (!$q.screen.gt.xs) return undefined;
 
   if (props.isSongButton) {
-    return props.mediaList.config?.uniqueId === 'pt'
+    return ['pt', 'service-talk'].includes(
+      props.mediaList.config?.uniqueId || '',
+    )
       ? t('add-an-opening-song')
       : t('add-a-closing-song');
+  }
+
+  // Song sections (pt, service-talk, circuit-overseer) show a small round button
+  // after a song is added, instead of a large labeled button
+  if (
+    ['circuit-overseer', 'pt', 'service-talk'].includes(
+      props.mediaList.config?.uniqueId || '',
+    )
+  ) {
+    return undefined;
   }
 
   return props.isCustom ? undefined : t('add-extra-media');
@@ -297,7 +309,9 @@ const buttonLabel = computed(() => {
 
 const tooltipText = computed(() => {
   if (props.isSongButton) {
-    return props.mediaList.config?.uniqueId === 'pt'
+    return ['pt', 'service-talk'].includes(
+      props.mediaList.config?.uniqueId || '',
+    )
       ? t('add-an-opening-song')
       : t('add-a-closing-song');
   }
