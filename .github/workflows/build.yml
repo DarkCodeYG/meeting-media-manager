@@ -128,7 +128,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: [lint, test]
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
@@ -153,7 +152,6 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Install Apple certificate
-        continue-on-error: true
         if: runner.os == 'macOS' && github.actor != 'dependabot[bot]'
         env:
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}

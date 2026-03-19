@@ -1,4 +1,5 @@
 import electronUpdater from 'electron-updater';
+const { autoUpdater } = electronUpdater;
 import { pathExists } from 'fs-extra/esm';
 import { IS_TEST } from 'src-electron/constants';
 import { isDownloadErrorExpected } from 'src-electron/main/downloads';
@@ -25,11 +26,11 @@ export async function initUpdater() {
   if (await pathExists(await getUpdatesDisabledPath())) return; // Skip updater if updates are disabled by user
   if (isPortable()) return; // Skip updater for portable version
 
-  electronUpdater.autoUpdater.allowDowngrade = true;
-  electronUpdater.autoUpdater.autoDownload = !IS_TEST;
-  electronUpdater.autoUpdater.autoInstallOnAppQuit = !IS_TEST;
+  autoUpdater.allowDowngrade = true;
+  autoUpdater.autoDownload = !IS_TEST;
+  autoUpdater.autoInstallOnAppQuit = !IS_TEST;
 
-  electronUpdater.autoUpdater.on('error', async (error, message) => {
+  autoUpdater.on('error', async (error, message) => {
     if (IS_TEST) return;
 
     if (await isDownloadErrorExpected()) return;
@@ -50,17 +51,17 @@ export async function initUpdater() {
     }
   });
 
-  electronUpdater.autoUpdater.on('update-available', (info) => {
+  autoUpdater.on('update-available', (info) => {
     console.log('Update available:', info);
     sendToWindow(mainWindowInfo.mainWindow, 'update-available');
   });
 
-  electronUpdater.autoUpdater.on('download-progress', (info) => {
+  autoUpdater.on('download-progress', (info) => {
     console.log('Update download progress:', info);
     sendToWindow(mainWindowInfo.mainWindow, 'update-download-progress', info);
   });
 
-  electronUpdater.autoUpdater.on('update-downloaded', (info) => {
+  autoUpdater.on('update-downloaded', (info) => {
     console.log('Update downloaded:', info);
     sendToWindow(mainWindowInfo.mainWindow, 'update-downloaded');
   });
@@ -74,16 +75,14 @@ export const triggerUpdateCheck = async (attempt = 1) => {
   }
 
   if (attempt === 1) {
-    electronUpdater.autoUpdater.allowPrerelease = await pathExists(
-      await getBetaUpdatesPath(),
-    );
+    autoUpdater.allowPrerelease = await pathExists(await getBetaUpdatesPath());
   }
 
   try {
     const { default: isOnline } = await import('is-online');
     const online = await isOnline();
     if (online) {
-      await electronUpdater.autoUpdater.checkForUpdatesAndNotify();
+      await autoUpdater.checkForUpdatesAndNotify();
     } else if (attempt < 5) {
       setTimeout(() => triggerUpdateCheck(attempt + 1), 5000);
     }
