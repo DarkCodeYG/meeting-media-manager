@@ -209,6 +209,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: M³ test build for ${{ matrix.os == 'macos-latest' && 'macOS' || matrix.os == 'windows-latest' && 'Windows' || 'Linux' }}
+          retention-days: 7
           path: |
             dist/electron/Packaged/*.exe
             dist/electron/Packaged/*.dmg

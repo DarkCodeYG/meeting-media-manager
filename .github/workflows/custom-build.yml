@@ -41,6 +41,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: M3-custom-${{ matrix.os == 'macos-latest' && 'macOS' || matrix.os == 'windows-latest' && 'Windows' || 'Linux' }}
+          retention-days: 7
           path: |
             dist/electron/Packaged/*.exe
             dist/electron/Packaged/*.dmg
@@ -80,7 +81,7 @@ jobs:
           omitBodyDuringUpdate: true
           omitNameDuringUpdate: true
           removeArtifacts: true
-          artifacts: "artifacts/**/*.exe,artifacts/**/*.dmg,artifacts/**/*.zip,artifacts/**/*.AppImage,artifacts/**/*.blockmap,artifacts/**/*.yml"
+          artifacts: 'artifacts/**/*.exe,artifacts/**/*.dmg,artifacts/**/*.zip,artifacts/**/*.AppImage,artifacts/**/*.blockmap,artifacts/**/*.yml'
           body: |
             ## Custom Build v${{ steps.version.outputs.version }}
 
