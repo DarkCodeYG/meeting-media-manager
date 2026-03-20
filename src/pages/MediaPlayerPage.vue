@@ -25,6 +25,7 @@
         <div
           v-if="showPreMeetingClock && announcementText"
           id="announcementBanner"
+          :style="yeartextFontStyle"
         >
           <span>{{ announcementText }}</span>
         </div>
