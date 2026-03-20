@@ -342,7 +342,7 @@ export const setElementFont = async (fontName: FontName) => {
         contexts: { fn: { fontName, name: 'setElementFont first try' } },
       });
       const url = useJwStore().fontUrls[fontName];
-      const fallbackLoaded = await setFallbackFont(fontName, url);
+      const fallbackLoaded = url ? await setFallbackFont(fontName, url) : false;
 
       if (!fallbackLoaded) {
         errorCatcher(error, {
@@ -400,7 +400,7 @@ const resolveFontRequest = async (
       fetchRaw(url, { method, signal }, method === 'HEAD'),
     );
 
-  let resolvedUrl = originalUrl;
+  let resolvedUrl: string = originalUrl ?? '';
   let response = await fetchFont(resolvedUrl);
 
   if (!response.ok && fontName === 'jw-icons-all') {
