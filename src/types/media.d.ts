@@ -108,6 +108,7 @@ export interface MediaItem {
 
 export interface MediaSection {
   bgColor?: string;
+  hideTalkTitleCard?: boolean;
   jwIconKeyword?: string;
   label?: string;
   publicTalkSpeaker?: string;

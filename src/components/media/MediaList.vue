@@ -13,6 +13,7 @@
       ref="sectionHeaderRef"
       v-model:collapsed="isCollapsed"
       :has-add-media-button="hasAddMediaButton"
+      :hide-talk-title-card="sectionData?.config?.hideTalkTitleCard"
       :is-custom="isCustomSection"
       :is-first="isFirst"
       :is-last="isLast"
@@ -25,23 +26,27 @@
       @move="moveSection"
       @open-import="openImportMenu"
       @rename="handleRename"
+      @toggle-talk-title-card="showTalkTitleCard"
       @update-color="updateSectionColor"
       @update-label="updateSectionLabel"
     />
     <!-- Talk Title Card -->
     <PublicTalkTitleCard
       v-if="
-        (currentSettings?.enablePublicTalkTitle &&
+        !sectionData?.config?.hideTalkTitleCard &&
+        ((currentSettings?.enablePublicTalkTitle &&
           (mediaList.config?.uniqueId === 'pt' ||
             mediaList.config?.uniqueId === 'circuit-overseer' ||
             mediaList.config?.uniqueId === 'service-talk')) ||
-        sectionData?.config?.showAnnouncementTitle
+          sectionData?.config?.showAnnouncementTitle)
       "
       :is-public-talk="
         !sectionData?.config?.showAnnouncementTitle &&
         mediaList.config?.uniqueId === 'pt'
       "
       :media-list="mediaList"
+      @delete="removeAnnouncementTitle"
+      @hide="hideTalkTitleCard"
       @update-speaker-info="updateSpeakerInfo"
       @update-talk-title="updateTalkTitle"
     />
@@ -221,6 +226,30 @@ const updateSpeakerInfo = (speaker: string) => {
   if (!config) return;
   jwStore.$patch(() => {
     config.publicTalkSpeaker = speaker;
+  });
+};
+
+const removeAnnouncementTitle = () => {
+  const config = sectionData.value?.config;
+  if (!config) return;
+  jwStore.$patch(() => {
+    config.showAnnouncementTitle = false;
+  });
+};
+
+const hideTalkTitleCard = () => {
+  const config = sectionData.value?.config;
+  if (!config) return;
+  jwStore.$patch(() => {
+    config.hideTalkTitleCard = true;
+  });
+};
+
+const showTalkTitleCard = () => {
+  const config = sectionData.value?.config;
+  if (!config) return;
+  jwStore.$patch(() => {
+    config.hideTalkTitleCard = false;
   });
 };
 

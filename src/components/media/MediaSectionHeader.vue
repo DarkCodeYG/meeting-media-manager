@@ -179,6 +179,22 @@
           </q-btn>
         </template>
 
+        <!-- Restore Talk Title Card Button -->
+        <template v-if="hideTalkTitleCard">
+          <q-btn
+            color="primary"
+            flat
+            icon="mmm-eye"
+            round
+            size="sm"
+            @click.stop="$emit('toggle-talk-title-card')"
+          >
+            <q-tooltip :delay="500">
+              {{ t('show-talk-title-card') }}
+            </q-tooltip>
+          </q-btn>
+        </template>
+
         <!-- Add Media Button -->
         <template v-if="hasAddMediaButton">
           <q-btn
@@ -243,6 +259,7 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps<{
   collapsed?: boolean;
   hasAddMediaButton: boolean;
+  hideTalkTitleCard?: boolean;
   isCustom: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -259,6 +276,7 @@ const emit = defineEmits<{
   move: [direction: 'down' | 'up'];
   'open-import': [section: string];
   rename: [value: boolean];
+  'toggle-talk-title-card': [];
   'update-color': [color: string];
   'update-label': [label: string];
   'update:collapsed': [value: boolean];

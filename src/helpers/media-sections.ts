@@ -215,8 +215,12 @@ export const createMeetingSections = (day: DateInfo) => {
     const calculatedConfig = getMeetingSectionConfigs(section);
     const mediaSection = getOrCreateMediaSection(day.mediaSections, section);
     // Preserve user-set properties before overwriting config
-    const { publicTalkSpeaker, publicTalkTitle, showAnnouncementTitle } =
-      mediaSection.config;
+    const {
+      hideTalkTitleCard,
+      publicTalkSpeaker,
+      publicTalkTitle,
+      showAnnouncementTitle,
+    } = mediaSection.config;
     mediaSection.config = calculatedConfig;
     if (publicTalkTitle) {
       mediaSection.config.publicTalkTitle = publicTalkTitle;
@@ -226,6 +230,9 @@ export const createMeetingSections = (day: DateInfo) => {
     }
     if (showAnnouncementTitle) {
       mediaSection.config.showAnnouncementTitle = showAnnouncementTitle;
+    }
+    if (hideTalkTitleCard) {
+      mediaSection.config.hideTalkTitleCard = hideTalkTitleCard;
     }
   });
 
@@ -239,8 +246,12 @@ export const createMeetingSections = (day: DateInfo) => {
       day.mediaSections,
       'service-talk',
     );
-    const { publicTalkSpeaker, publicTalkTitle, showAnnouncementTitle } =
-      serviceTalkSection.config;
+    const {
+      hideTalkTitleCard: hideTalkTitleCardST,
+      publicTalkSpeaker,
+      publicTalkTitle,
+      showAnnouncementTitle,
+    } = serviceTalkSection.config;
     serviceTalkSection.config = getMeetingSectionConfigs('service-talk');
     if (publicTalkTitle) {
       serviceTalkSection.config.publicTalkTitle = publicTalkTitle;
@@ -250,6 +261,9 @@ export const createMeetingSections = (day: DateInfo) => {
     }
     if (showAnnouncementTitle) {
       serviceTalkSection.config.showAnnouncementTitle = showAnnouncementTitle;
+    }
+    if (hideTalkTitleCardST) {
+      serviceTalkSection.config.hideTalkTitleCard = hideTalkTitleCardST;
     }
   }
 };

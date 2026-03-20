@@ -8,9 +8,9 @@
         dense
         :label="
           t(
-            sectionId === 'pt'
+            props.mediaList.config?.uniqueId === 'pt'
               ? 'public-talk-title'
-              : sectionId === 'service-talk'
+              : props.mediaList.config?.uniqueId === 'service-talk'
                 ? 'service-talk-title'
                 : 'talk-title',
           )
@@ -32,21 +32,53 @@
       />
     </q-item-section>
     <q-item-section side style="align-content: center">
-      <q-btn
-        v-if="!isPlaying"
-        :color="talkTitle?.trim() ? 'primary' : 'grey'"
-        :disable="!talkTitle?.trim() || videoOrAudioPlaying"
-        icon="mmm-play"
-        rounded
-        @click="togglePlay"
-      />
-      <q-btn
-        v-else
-        color="negative"
-        icon="mmm-stop"
-        rounded
-        @click="togglePlay"
-      />
+      <div class="row items-center q-gutter-xs">
+        <q-btn
+          v-if="showDotsButton"
+          color="accent-400"
+          flat
+          icon="mmm-dots"
+          round
+          size="sm"
+        >
+          <q-menu>
+            <q-list>
+              <q-item
+                v-if="props.mediaList.config?.showAnnouncementTitle"
+                v-close-popup
+                clickable
+                @click="handleDelete"
+              >
+                <q-item-section avatar>
+                  <q-icon color="negative" name="mmm-delete" />
+                </q-item-section>
+                <q-item-section>{{ t('delete') }}</q-item-section>
+              </q-item>
+              <q-item v-else v-close-popup clickable @click="handleHide">
+                <q-item-section avatar>
+                  <q-icon name="mmm-file-hidden" />
+                </q-item-section>
+                <q-item-section>{{ t('hide-talk-title-card') }}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+        <q-btn
+          v-if="!isPlaying"
+          :color="talkTitle?.trim() ? 'primary' : 'grey'"
+          :disable="!talkTitle?.trim() || videoOrAudioPlaying"
+          icon="mmm-play"
+          rounded
+          @click="togglePlay"
+        />
+        <q-btn
+          v-else
+          color="negative"
+          icon="mmm-stop"
+          rounded
+          @click="togglePlay"
+        />
+      </div>
     </q-item-section>
   </q-item>
 </template>
@@ -63,15 +95,25 @@ import { useCurrentStateStore } from 'stores/current-state';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+const STANDARD_TALK_SECTIONS = ['pt', 'circuit-overseer', 'service-talk'];
+
 const props = defineProps<{
   isPublicTalk?: boolean;
   mediaList: MediaSectionWithConfig;
 }>();
 
 const emit = defineEmits<{
+  delete: [];
+  hide: [];
   'update-speaker-info': [speaker: string];
   'update-talk-title': [title: string];
 }>();
+
+const showDotsButton = computed(
+  () =>
+    !!props.mediaList.config?.showAnnouncementTitle ||
+    STANDARD_TALK_SECTIONS.includes(props.mediaList.config?.uniqueId || ''),
+);
 
 const { t } = useI18n();
 const currentState = useCurrentStateStore();
@@ -115,7 +157,7 @@ const buildHtml = () => {
       : t('public-talk');
     return `<p class="pt-subtitle"><strong>${subtitle}</strong></p><p class="pt-title"><strong>${title}</strong></p>${speaker}`;
   }
-  if (sectionId === 'service-talk') {
+  if (props.mediaList.config?.uniqueId === 'service-talk') {
     const subtitle = locale
       ? t('service-talk', {}, { locale })
       : t('service-talk');
@@ -124,7 +166,15 @@ const buildHtml = () => {
   return `<p class="pt-title"><strong>${title}</strong></p>${speaker}`;
 };
 
-const sectionId = props.mediaList.config?.uniqueId;
+const handleDelete = () => {
+  stopTitleDisplay();
+  emit('delete');
+};
+
+const handleHide = () => {
+  stopTitleDisplay();
+  emit('hide');
+};
 
 const togglePlay = () => {
   if (!talkTitle.value?.trim()) return;
@@ -150,7 +200,9 @@ const togglePlay = () => {
   if (isPlaying.value) {
     // Stop other talk title cards before playing
     globalThis.dispatchEvent(
-      new CustomEvent('stop-talk-title', { detail: { except: sectionId } }),
+      new CustomEvent('stop-talk-title', {
+        detail: { except: props.mediaList.config?.uniqueId },
+      }),
     );
     toggleMediaWindowVisibility(true);
   }
@@ -165,7 +217,7 @@ const togglePlay = () => {
 // Listen for stop signal from other talk title cards
 const handleStopTalkTitle = (e: Event) => {
   const exceptId = (e as CustomEvent).detail?.except;
-  if (exceptId !== sectionId && isPlaying.value) {
+  if (exceptId !== props.mediaList.config?.uniqueId && isPlaying.value) {
     isPlaying.value = false;
   }
 };
