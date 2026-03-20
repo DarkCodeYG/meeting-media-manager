@@ -180,6 +180,7 @@
   "playback-speed": "Playback speed",
   "reset-playback-speed": "Reset playback speed",
   "talk-title": "Talk title",
+  "announcement-title": "Show talk title or announcements",
   "enableMusicButton": "Enable background music playback",
   "enableMusicButton-explain": "Play songs before and after the meetings with only a few clicks.",
   "enablePinyinSongs": "Prefer pinyin songs",

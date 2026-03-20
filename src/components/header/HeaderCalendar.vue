@@ -215,6 +215,14 @@
             </q-item-section>
           </q-item>
         </template>
+        <q-item v-close-popup clickable @click="openAnnouncementTitle">
+          <q-item-section avatar>
+            <q-icon color="primary" name="mmm-lectern" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>{{ t('announcement-title') }}</q-item-label>
+          </q-item-section>
+        </q-item>
         <template
           v-if="
             additionalMediaForSelectedDayExists ||
@@ -368,6 +376,11 @@
     v-model="showSectionPicker"
     :files="pendingFiles"
     @section-selected="handleSectionSelected"
+    @update:model-value="
+      (val) => {
+        if (!val) pendingAnnouncementToggle = false;
+      }
+    "
   />
   <DialogRemoteVideo
     v-model="showRemoteVideo"
@@ -544,6 +557,7 @@ type PendingImport =
     };
 
 const pendingImport = ref<null | PendingImport>(null);
+const pendingAnnouncementToggle = ref(false);
 
 const openFileImportDialog = () => {
   globalThis.dispatchEvent(
@@ -905,11 +919,39 @@ const openCustomSectionEdit = () => {
   showCustomSectionEdit.value = true;
 };
 
+const toggleAnnouncementTitleForSection = (
+  sectionId: MediaSectionIdentifier,
+) => {
+  const target = selectedDateObject.value?.mediaSections?.find(
+    (s) => s.config.uniqueId === sectionId,
+  );
+  if (target?.config) {
+    target.config.showAnnouncementTitle = !target.config.showAnnouncementTitle;
+  }
+};
+
+const openAnnouncementTitle = () => {
+  if (!selectedDateObject.value?.mediaSections?.length) return;
+  const sections = selectedDateObject.value.mediaSections;
+  if (sections.length === 1 && sections[0]) {
+    toggleAnnouncementTitleForSection(sections[0].config.uniqueId);
+    return;
+  }
+  pendingAnnouncementToggle.value = true;
+  showSectionPicker.value = true;
+};
+
 const handleSectionSelected = async (
   selectedSection: MediaSectionIdentifier,
 ) => {
   section.value = selectedSection;
   showSectionPicker.value = false;
+
+  if (pendingAnnouncementToggle.value) {
+    toggleAnnouncementTitleForSection(selectedSection);
+    pendingAnnouncementToggle.value = false;
+    return;
+  }
 
   if (pendingImport.value) {
     await processPendingImport(selectedSection);

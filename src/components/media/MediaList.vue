@@ -31,12 +31,16 @@
     <!-- Talk Title Card -->
     <PublicTalkTitleCard
       v-if="
-        currentSettings?.enablePublicTalkTitle &&
-        (mediaList.config?.uniqueId === 'pt' ||
-          mediaList.config?.uniqueId === 'circuit-overseer' ||
-          mediaList.config?.uniqueId === 'service-talk')
+        (currentSettings?.enablePublicTalkTitle &&
+          (mediaList.config?.uniqueId === 'pt' ||
+            mediaList.config?.uniqueId === 'circuit-overseer' ||
+            mediaList.config?.uniqueId === 'service-talk')) ||
+        sectionData?.config?.showAnnouncementTitle
       "
-      :is-public-talk="mediaList.config?.uniqueId === 'pt'"
+      :is-public-talk="
+        !sectionData?.config?.showAnnouncementTitle &&
+        mediaList.config?.uniqueId === 'pt'
+      "
       :media-list="mediaList"
       @update-speaker-info="updateSpeakerInfo"
       @update-talk-title="updateTalkTitle"
@@ -153,6 +157,7 @@ import {
   saveWatchedMediaSectionOrder,
 } from 'src/helpers/media-sections';
 import { useCurrentStateStore } from 'stores/current-state';
+import { useJwStore } from 'stores/jw';
 import { computed, nextTick, ref, watch } from 'vue';
 
 import MediaDivider from './MediaDivider.vue';
@@ -170,6 +175,7 @@ const props = defineProps<{
 
 const currentState = useCurrentStateStore();
 const { currentSettings, selectedDateObject } = storeToRefs(currentState);
+const jwStore = useJwStore();
 
 // Ref to the section header
 const sectionHeaderRef = ref<InstanceType<typeof MediaSectionHeader> | null>(
@@ -203,16 +209,33 @@ const {
 } = useMediaSection(props.mediaList);
 
 const updateTalkTitle = (title: string) => {
-  if (sectionData.value?.config) {
-    sectionData.value.config.publicTalkTitle = title;
-  }
+  const config = sectionData.value?.config;
+  if (!config) return;
+  jwStore.$patch(() => {
+    config.publicTalkTitle = title;
+  });
 };
 
 const updateSpeakerInfo = (speaker: string) => {
-  if (sectionData.value?.config) {
-    sectionData.value.config.publicTalkSpeaker = speaker;
-  }
+  const config = sectionData.value?.config;
+  if (!config) return;
+  jwStore.$patch(() => {
+    config.publicTalkSpeaker = speaker;
+  });
 };
+
+// Auto-remove announcement title card when all items are deleted
+watch(
+  () => sectionData.value?.items?.length,
+  (newLength) => {
+    const config = sectionData.value?.config;
+    if (!newLength && config?.showAnnouncementTitle) {
+      jwStore.$patch(() => {
+        config.showAnnouncementTitle = false;
+      });
+    }
+  },
+);
 
 import { useEventListener } from '@vueuse/core';
 // Use the media dividers composable

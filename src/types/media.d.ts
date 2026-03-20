@@ -114,6 +114,7 @@ export interface MediaSection {
   publicTalkTitle?: string;
   repeat?: boolean; // Whether the section should repeat
   repeatInterval?: number; // Interval in seconds for images (default 10)
+  showAnnouncementTitle?: boolean;
   uniqueId: MediaSectionIdentifier;
 }
 
