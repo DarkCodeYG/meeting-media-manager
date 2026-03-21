@@ -20,6 +20,15 @@
         'clock-active': showPreMeetingClock,
       }"
     >
+      <!-- FORK-MERGE: 포크 전용 - pre-meeting announcement banner. 충돌 시 이 블록 유지. -->
+      <Transition name="announcement-fade">
+        <div
+          v-if="showPreMeetingClock && announcementText"
+          id="announcementBanner"
+        >
+          <span>{{ announcementText }}</span>
+        </div>
+      </Transition>
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div
         id="yeartext"
@@ -179,6 +188,7 @@ import {
 } from '@vueuse/core';
 import DOMPurify from 'dompurify';
 import { useQuasar } from 'quasar';
+import { locales } from 'src/constants/locales';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import {
   getJwIconFromKeyword,
@@ -201,7 +211,7 @@ import { useI18n } from 'vue-i18n';
 
 const { sanitize } = DOMPurify;
 
-const { t } = useI18n();
+const { locale, t } = useI18n({ useScope: 'global' });
 
 const { getScreenAccessStatus, PLATFORM } = globalThis.electronApi;
 
@@ -926,6 +936,15 @@ const { data: preMeetingClockRemaining } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
 });
 
+watch(
+  () => currentLang.value,
+  (jwLangCode) => {
+    if (!jwLangCode) return;
+    const matched = locales.find((l) => l.langcode === jwLangCode);
+    if (matched) locale.value = matched.value;
+  },
+);
+
 const showPreMeetingClock = computed(
   () => !!preMeetingClockRemaining.value && preMeetingClockRemaining.value > 0,
 );
@@ -966,6 +985,14 @@ const countdownText = computed(() => {
   const mins = Math.floor(remainingSeconds.value / 60);
   const secs = remainingSeconds.value % 60;
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+});
+
+const announcementText = computed(() => {
+  const s = remainingSeconds.value;
+  if (s <= 0 || s > 60) return '';
+  if (s > 40) return t('preMeetingAnnouncement1');
+  if (s > 20) return t('preMeetingAnnouncement2');
+  return t('preMeetingAnnouncement3');
 });
 
 watch(showPreMeetingClock, (show) => {
