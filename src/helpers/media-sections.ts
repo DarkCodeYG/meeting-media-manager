@@ -215,10 +215,13 @@ export const createMeetingSections = (day: DateInfo) => {
     const calculatedConfig = getMeetingSectionConfigs(section);
     const mediaSection = getOrCreateMediaSection(day.mediaSections, section);
     // Preserve user-set properties before overwriting config
-    const { publicTalkTitle } = mediaSection.config;
+    const { publicTalkSpeaker, publicTalkTitle } = mediaSection.config;
     mediaSection.config = calculatedConfig;
     if (publicTalkTitle) {
       mediaSection.config.publicTalkTitle = publicTalkTitle;
+    }
+    if (publicTalkSpeaker) {
+      mediaSection.config.publicTalkSpeaker = publicTalkSpeaker;
     }
   });
 
@@ -232,10 +235,13 @@ export const createMeetingSections = (day: DateInfo) => {
       day.mediaSections,
       'service-talk',
     );
-    const { publicTalkTitle } = serviceTalkSection.config;
+    const { publicTalkSpeaker, publicTalkTitle } = serviceTalkSection.config;
     serviceTalkSection.config = getMeetingSectionConfigs('service-talk');
     if (publicTalkTitle) {
       serviceTalkSection.config.publicTalkTitle = publicTalkTitle;
+    }
+    if (publicTalkSpeaker) {
+      serviceTalkSection.config.publicTalkSpeaker = publicTalkSpeaker;
     }
   }
 };
