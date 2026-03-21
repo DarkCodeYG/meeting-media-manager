@@ -38,6 +38,7 @@
       "
       :is-public-talk="mediaList.config?.uniqueId === 'pt'"
       :media-list="mediaList"
+      @update-speaker-info="updateSpeakerInfo"
       @update-talk-title="updateTalkTitle"
     />
     <!-- Empty State -->
@@ -204,6 +205,12 @@ const {
 const updateTalkTitle = (title: string) => {
   if (sectionData.value?.config) {
     sectionData.value.config.publicTalkTitle = title;
+  }
+};
+
+const updateSpeakerInfo = (speaker: string) => {
+  if (sectionData.value?.config) {
+    sectionData.value.config.publicTalkSpeaker = speaker;
   }
 };
 

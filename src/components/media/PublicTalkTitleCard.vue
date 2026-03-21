@@ -4,6 +4,7 @@
       <q-input
         v-model="talkTitle"
         autogrow
+        clearable
         dense
         :label="
           t(
@@ -14,6 +15,17 @@
                 : 'talk-title',
           )
         "
+        outlined
+        style="max-width: calc(100% - 16px)"
+        type="textarea"
+      />
+      <q-input
+        v-model="speakerInfo"
+        autogrow
+        class="q-mt-sm"
+        clearable
+        dense
+        :label="t('talk-speaker-placeholder')"
         outlined
         style="max-width: calc(100% - 16px)"
         type="textarea"
@@ -57,6 +69,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  'update-speaker-info': [speaker: string];
   'update-talk-title': [title: string];
 }>();
 
@@ -73,6 +86,7 @@ const videoOrAudioPlaying = computed(
 );
 
 const talkTitle = ref(props.mediaList.config?.publicTalkTitle || '');
+const speakerInfo = ref(props.mediaList.config?.publicTalkSpeaker || '');
 const isPlaying = ref(false);
 
 const escapeHtml = (s: string) =>
@@ -90,21 +104,24 @@ const stopTitleDisplay = () => {
 
 const buildHtml = () => {
   const title = escapeHtml(talkTitle.value.trim()).replace(/\n/g, '<br>');
+  const speaker = speakerInfo.value?.trim()
+    ? `<p class="pt-speaker">${escapeHtml(speakerInfo.value.trim()).replace(/\n/g, '<br>')}</p>`
+    : '';
   const lang = currentSettings.value?.lang;
   const locale = locales.find((l) => l.langcode === lang)?.value;
   if (props.isPublicTalk) {
     const subtitle = locale
       ? t('public-talk', {}, { locale })
       : t('public-talk');
-    return `<p class="pt-subtitle"><strong>${subtitle}</strong></p><p class="pt-title"><strong>${title}</strong></p>`;
+    return `<p class="pt-subtitle"><strong>${subtitle}</strong></p><p class="pt-title"><strong>${title}</strong></p>${speaker}`;
   }
   if (sectionId === 'service-talk') {
     const subtitle = locale
       ? t('service-talk', {}, { locale })
       : t('service-talk');
-    return `<p class="pt-subtitle"><strong>${subtitle}</strong></p><p class="pt-title"><strong>${title}</strong></p>`;
+    return `<p class="pt-subtitle"><strong>${subtitle}</strong></p><p class="pt-title"><strong>${title}</strong></p>${speaker}`;
   }
-  return `<p class="pt-title"><strong>${title}</strong></p>`;
+  return `<p class="pt-title"><strong>${title}</strong></p>${speaker}`;
 };
 
 const sectionId = props.mediaList.config?.uniqueId;
@@ -167,6 +184,12 @@ watch(talkTitle, (val) => {
   emit('update-talk-title', val);
 });
 
+// Persist speaker info to section config via emit
+watch(speakerInfo, (val) => {
+  stopTitleDisplay();
+  emit('update-speaker-info', val || '');
+});
+
 // Stop title display when any media starts playing (image, video, audio)
 watch(
   () => currentState.mediaPlaying.url,
@@ -180,6 +203,14 @@ watch(
   () => props.mediaList.config?.publicTalkTitle,
   (newVal) => {
     talkTitle.value = newVal || '';
+  },
+);
+
+// Restore speaker info when switching dates
+watch(
+  () => props.mediaList.config?.publicTalkSpeaker,
+  (newVal) => {
+    speakerInfo.value = newVal || '';
   },
 );
 </script>
