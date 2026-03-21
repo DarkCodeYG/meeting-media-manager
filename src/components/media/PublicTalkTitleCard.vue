@@ -141,6 +141,8 @@ const togglePlay = () => {
       url: '',
       zoom: 1,
     };
+    // Stop Zoom screen sharing only when interrupting media playback
+    triggerZoomScreenShare(false);
   }
 
   isPlaying.value = !isPlaying.value;
@@ -150,8 +152,6 @@ const togglePlay = () => {
     globalThis.dispatchEvent(
       new CustomEvent('stop-talk-title', { detail: { except: sectionId } }),
     );
-    // Stop Zoom screen sharing for talk title display
-    triggerZoomScreenShare(false);
     toggleMediaWindowVisibility(true);
   }
 
