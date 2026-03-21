@@ -108,7 +108,10 @@ import {
   getNextSongFromQueue,
   prepareMeetingDaySongQueue,
 } from 'src/helpers/background-music';
-import { remainingTimeBeforeMeetingStart } from 'src/helpers/date';
+import {
+  isBethelSpeakerDate,
+  remainingTimeBeforeMeetingStart,
+} from 'src/helpers/date';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { downloadBackgroundMusic } from 'src/helpers/jw-media';
 import { formatTime } from 'src/utils/time';
@@ -183,7 +186,9 @@ watch(
 
 // Meeting day checks
 const isMeetingToday = computed(() => {
-  return isSelectedDayToday.value && !!selectedDayMeetingType.value;
+  if (!isSelectedDayToday.value) return false;
+  if (selectedDayMeetingType.value) return true;
+  return isBethelSpeakerDate(new Date());
 });
 
 const isMeetingStartTimeInPast = computed(() => {

@@ -220,6 +220,7 @@ export interface SettingsValues {
   enablePlaybackSpeedControl: boolean;
   // FORK-MERGE: 포크 전용 기능 - 업스트림에 없음. 충돌 시 포크 버전 유지.
   enablePreMeetingClock: boolean;
+  enablePreMeetingClockAnnouncement: boolean;
   enablePublicTalkTitle: boolean;
   enableSubtitles: boolean;
   excludeFootnotes: boolean;

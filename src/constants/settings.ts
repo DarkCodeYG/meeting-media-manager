@@ -524,6 +524,12 @@ export const settingsDefinitions: SettingsItems = {
     subgroup: 'media-display',
     type: 'toggle',
   },
+  enablePreMeetingClockAnnouncement: {
+    depends: 'enableMediaDisplayButton',
+    group: 'advanced',
+    subgroup: 'media-display',
+    type: 'toggle',
+  },
   enableSubtitles: {
     depends: 'enableMediaDisplayButton',
     group: 'advanced',
@@ -654,6 +660,7 @@ export const defaultSettings: SettingsValues = {
   enablePlaybackSpeedControl: false,
   // FORK-MERGE: 포크 전용 기능 - 업스트림에 없음. 충돌 시 포크 버전 유지.
   enablePreMeetingClock: false,
+  enablePreMeetingClockAnnouncement: true,
   enablePublicTalkTitle: false,
   enableSubtitles: false,
   excludeFootnotes: false,

@@ -23,7 +23,7 @@
       <!-- FORK-MERGE: 포크 전용 - pre-meeting announcement banner. 충돌 시 이 블록 유지. -->
       <Transition name="announcement-fade">
         <div
-          v-if="showPreMeetingClock && announcementText"
+          v-if="showPreMeetingAnnouncement && announcementText"
           id="announcementBanner"
           :style="yeartextFontStyle"
         >
@@ -936,6 +936,12 @@ const yeartextFontStyle = computed(() =>
 const { data: preMeetingClockRemaining } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
 });
+const { data: preMeetingAnnouncementRemaining } = useBroadcastChannel<
+  number,
+  number
+>({
+  name: 'pre-meeting-announcement',
+});
 
 watch(
   () => currentLang.value,
@@ -988,8 +994,14 @@ const countdownText = computed(() => {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 });
 
+const showPreMeetingAnnouncement = computed(
+  () =>
+    !!preMeetingAnnouncementRemaining.value &&
+    preMeetingAnnouncementRemaining.value > 0,
+);
+
 const announcementText = computed(() => {
-  const s = remainingSeconds.value;
+  const s = preMeetingAnnouncementRemaining.value || 0;
   if (s <= 0 || s > 60) return '';
   if (s > 40) return t('preMeetingAnnouncement1');
   if (s > 20) return t('preMeetingAnnouncement2');

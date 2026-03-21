@@ -1073,35 +1073,53 @@ watchImmediate(
 const { post: postPreMeetingClock } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
 });
+const { post: postPreMeetingAnnouncement } = useBroadcastChannel<
+  number,
+  number
+>({
+  name: 'pre-meeting-announcement',
+});
 
-let preMeetingClockInterval: null | ReturnType<typeof setInterval> = null;
+let preMeetingInterval: null | ReturnType<typeof setInterval> = null;
 
-const checkPreMeetingClock = () => {
-  if (!currentSettings.value?.enablePreMeetingClock) {
-    postPreMeetingClock(0);
-    return;
-  }
+const checkPreMeetingFeatures = () => {
+  const clockEnabled = !!currentSettings.value?.enablePreMeetingClock;
+  const announcementEnabled =
+    !!currentSettings.value?.enablePreMeetingClockAnnouncement;
+
   const remaining = remainingTimeBeforeMeetingStart();
-  // Show clock when within 5 minutes (300 seconds) before meeting start
-  if (remaining > 0 && remaining <= 300) {
+
+  // Clock: show within 5 minutes (300 seconds) before meeting start
+  if (clockEnabled && remaining > 0 && remaining <= 300) {
     postPreMeetingClock(remaining);
   } else {
     postPreMeetingClock(0);
   }
+
+  // Announcement: show within 1 minute (60 seconds) before meeting start
+  if (announcementEnabled && remaining > 0 && remaining <= 60) {
+    postPreMeetingAnnouncement(remaining);
+  } else {
+    postPreMeetingAnnouncement(0);
+  }
 };
 
 watchImmediate(
-  () => currentSettings.value?.enablePreMeetingClock,
-  (enabled) => {
-    if (preMeetingClockInterval) {
-      clearInterval(preMeetingClockInterval);
-      preMeetingClockInterval = null;
+  () => [
+    currentSettings.value?.enablePreMeetingClock,
+    currentSettings.value?.enablePreMeetingClockAnnouncement,
+  ],
+  ([clockEnabled, announcementEnabled]) => {
+    if (preMeetingInterval) {
+      clearInterval(preMeetingInterval);
+      preMeetingInterval = null;
     }
-    if (enabled) {
-      checkPreMeetingClock();
-      preMeetingClockInterval = setInterval(checkPreMeetingClock, 1000);
+    if (clockEnabled || announcementEnabled) {
+      checkPreMeetingFeatures();
+      preMeetingInterval = setInterval(checkPreMeetingFeatures, 1000);
     } else {
       postPreMeetingClock(0);
+      postPreMeetingAnnouncement(0);
     }
   },
 );
