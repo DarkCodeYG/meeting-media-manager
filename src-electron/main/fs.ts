@@ -4,8 +4,9 @@ import { watch as filesystemWatch, type FSWatcher } from 'chokidar';
 import { app, dialog } from 'electron';
 import { ensureDir, type Stats } from 'fs-extra';
 import { createWriteStream } from 'node:fs';
-import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
   addElectronBreadcrumb,
   captureElectronError,
@@ -18,7 +19,7 @@ import {
   JWPUB_EXTENSIONS,
   PDF_EXTENSIONS,
 } from 'src/constants/media';
-import { uuid } from 'src/shared/vanilla';
+import { log, uuid } from 'src/shared/vanilla';
 import upath from 'upath';
 import yauzl from 'yauzl';
 
@@ -29,15 +30,30 @@ const ongoingDecompressions = new Map<string, Promise<UnzipResult[]>>();
 const MAX_FILES = 10000;
 const MAX_SIZE = 2000000000; // 2 GB
 const THRESHOLD_RATIO = 100;
+const PATH_PROBE_SETTLE_DELAY_MS = 50;
+const PATH_PROBE_RETRY_DELAY_MS = 50;
+const PATH_PROBE_RETRY_COUNT = 4;
+const SHARED_PATH_BACKOFF_MS = 10 * 60 * 1000;
+const SHARED_PATH_HEALTH_FILENAME = 'shared-path-health.json';
+const SHARED_PATH_HEALTH_FOLDERS = [
+  'Additional Media',
+  'Fonts',
+  'Publications',
+];
 
 let defaultAppDataPath: null | string = null;
+let sharedPathBackoffUntil: null | number = null;
+let sharedPathBackoffLoaded = false;
+
+type PathMode = 'shared' | 'user';
+
+type PathProbeResult = 'backoff' | 'failed' | 'not-machine-wide' | 'passed';
 
 interface UnzipContext {
   input: string;
   opts?: UnzipOptions;
   output: string;
 }
-
 interface ZipfileState {
   checkIfComplete: () => Promise<void>;
   extractedFiles: UnzipResult[];
@@ -48,32 +64,250 @@ interface ZipfileState {
   zipfile: yauzl.ZipFile;
 }
 
+const getSharedPathHealthFile = () =>
+  join(app.getPath('userData'), SHARED_PATH_HEALTH_FILENAME);
+
+const setPathTelemetry = async (
+  pathMode: PathMode,
+  pathProbeResult: PathProbeResult,
+) => {
+  const { setTag } = await import('@sentry/electron/main');
+  setTag('path_mode', pathMode);
+  setTag('path_probe_result', pathProbeResult);
+  addElectronBreadcrumb({
+    category: 'filesystem',
+    data: { pathMode, pathProbeResult },
+    level: 'info',
+    message: '[getAppDataPath] storage selection',
+  });
+};
+
+const loadSharedPathBackoff = async () => {
+  if (sharedPathBackoffLoaded) return;
+  sharedPathBackoffLoaded = true;
+  try {
+    const healthPath = getSharedPathHealthFile();
+    const content = await readFile(healthPath, 'utf8')
+      .then((raw) => JSON.parse(raw) as { unhealthyUntil?: number })
+      .catch(() => null);
+    sharedPathBackoffUntil = content?.unhealthyUntil ?? null;
+  } catch {
+    sharedPathBackoffUntil = null;
+  }
+};
+
+const persistSharedPathBackoff = async (unhealthyUntil: null | number) => {
+  sharedPathBackoffUntil = unhealthyUntil;
+  try {
+    const healthPath = getSharedPathHealthFile();
+    if (!unhealthyUntil) {
+      await rm(healthPath, { force: true });
+      return;
+    }
+    await writeFile(
+      healthPath,
+      JSON.stringify({ unhealthyUntil }, null, 2),
+      'utf8',
+    );
+  } catch (error) {
+    captureElectronError(error, {
+      contexts: {
+        fn: {
+          name: 'persistSharedPathBackoff',
+          unhealthyUntil,
+        },
+      },
+    });
+  }
+};
+
+const isSharedPathBackoffActive = async () => {
+  await loadSharedPathBackoff();
+  return !!sharedPathBackoffUntil && Date.now() < sharedPathBackoffUntil;
+};
+
+const markSharedPathUnhealthy = async () => {
+  await persistSharedPathBackoff(Date.now() + SHARED_PATH_BACKOFF_MS);
+};
+
+const probeSharedSubfolders = async (sharedPath: string) => {
+  for (const folder of SHARED_PATH_HEALTH_FOLDERS) {
+    const dirPath = join(sharedPath, folder);
+    const testFile = join(dirPath, `.health-check-${uuid()}.tmp`);
+    await mkdir(dirPath, { recursive: true });
+    await writeFile(testFile, 'ok', 'utf8');
+    await rm(testFile, { force: true });
+  }
+};
+
 /**
  * Gets the app data path (shared or user data)
  * @returns The app data path
  */
 export async function getAppDataPath(): Promise<string> {
   if (defaultAppDataPath) {
+    if (await isUsablePath(defaultAppDataPath)) {
+      await setPathTelemetry(
+        defaultAppDataPath === app.getPath('userData') ? 'user' : 'shared',
+        'passed',
+      );
+      return defaultAppDataPath;
+    }
+    log(
+      '📁 Cached app data path became unusable. Falling back.',
+      'electronFilesystem',
+      'warn',
+      defaultAppDataPath,
+    );
+    defaultAppDataPath = null;
+  }
+
+  const userDataPath = app.getPath('userData');
+  const userDataUsable = await isUsablePath(userDataPath);
+  if (userDataUsable) {
+    if (await isSharedPathBackoffActive()) {
+      defaultAppDataPath = userDataPath;
+      await setPathTelemetry('user', 'backoff');
+      return defaultAppDataPath;
+    }
+
+    const usableSharedPath = await getSharedDataPath();
+
+    if (usableSharedPath) {
+      try {
+        await probeSharedSubfolders(usableSharedPath);
+        await persistSharedPathBackoff(null);
+        log(
+          '📁 Using shared data path:',
+          'electronFilesystem',
+          'log',
+          usableSharedPath,
+        );
+        defaultAppDataPath = usableSharedPath;
+        await setPathTelemetry('shared', 'passed');
+        return defaultAppDataPath;
+      } catch (error) {
+        captureElectronError(error, {
+          contexts: {
+            fn: {
+              name: 'getAppDataPath.probeSharedSubfolders',
+              sharedPath: usableSharedPath,
+            },
+          },
+          tags: {
+            path_mode: 'shared',
+            path_probe_result: 'failed',
+          },
+        });
+        await markSharedPathUnhealthy();
+        await setPathTelemetry('user', 'failed');
+      }
+    } else {
+      await setPathTelemetry('user', 'not-machine-wide');
+    }
+
+    defaultAppDataPath = userDataPath;
+    log(
+      '📁 Shared data path not available, fallback to user data path:',
+      'electronFilesystem',
+      'log',
+      defaultAppDataPath,
+    );
     return defaultAppDataPath;
   }
 
-  const usableSharedPath = await getSharedDataPath();
-
-  if (usableSharedPath) {
-    console.log('📁 Using shared data path:', usableSharedPath);
-    defaultAppDataPath = usableSharedPath;
-    return defaultAppDataPath;
-  }
-
-  defaultAppDataPath = app.getPath('userData');
-  console.log(
-    '📁 Shared data path not available, fallback to user data path:',
-    defaultAppDataPath,
+  log(
+    '📁 User data path is not usable. Returning user data path as last resort:',
+    'electronFilesystem',
+    'warn',
+    userDataPath,
   );
+  await setPathTelemetry('user', 'failed');
+  defaultAppDataPath = userDataPath;
   return defaultAppDataPath;
 }
 
 const isUsablePathPromises = new Map<string, Promise<boolean>>();
+
+const WINDOWS_RETRYABLE_PROBE_CODES = new Set(['EBUSY', 'EPERM']);
+
+const getErrorCode = (error: unknown) => (error as { code?: string })?.code;
+
+const isRetryableProbeCleanupError = (error: unknown) =>
+  process.platform === 'win32' &&
+  WINDOWS_RETRYABLE_PROBE_CODES.has(getErrorCode(error) ?? '');
+
+const logProbeCleanupWarning = (
+  error: unknown,
+  basePath: string,
+  targetPath: string,
+  stage: 'directory' | 'file',
+) => {
+  addElectronBreadcrumb({
+    category: 'filesystem',
+    data: {
+      basePath,
+      code: getErrorCode(error),
+      stage,
+      targetPath,
+    },
+    level: 'warning',
+    message: `[isUsablePath] Probe cleanup skipped after transient lock`,
+  });
+};
+
+const cleanupProbePath = async (
+  targetPath: string,
+  options: { force: boolean; recursive?: boolean },
+  basePath: string,
+  stage: 'directory' | 'file',
+) => {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= PATH_PROBE_RETRY_COUNT; attempt += 1) {
+    try {
+      await rm(targetPath, options);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (
+        !isRetryableProbeCleanupError(error) ||
+        attempt === PATH_PROBE_RETRY_COUNT
+      ) {
+        break;
+      }
+      await delay(PATH_PROBE_RETRY_DELAY_MS);
+    }
+  }
+
+  if (isRetryableProbeCleanupError(lastError)) {
+    logProbeCleanupWarning(lastError, basePath, targetPath, stage);
+    return;
+  }
+
+  captureElectronError(lastError, {
+    contexts: {
+      fn: {
+        args: { basePath, stage, targetPath },
+        name: 'isUsablePath.cleanupProbePath',
+      },
+    },
+  });
+};
+
+const cleanupProbe = async (
+  basePath: string,
+  testDir: string,
+  testFile: string,
+) => {
+  await cleanupProbePath(testFile, { force: true }, basePath, 'file');
+  await cleanupProbePath(
+    testDir,
+    { force: true, recursive: true },
+    basePath,
+    'directory',
+  );
+};
 
 export function isUsablePath(basePath?: string): Promise<boolean> {
   if (!basePath) return Promise.resolve(false);
@@ -88,9 +322,9 @@ export function isUsablePath(basePath?: string): Promise<boolean> {
 
         const testFile = join(testDir, 'test.txt');
         await writeFile(testFile, 'ok');
+        await delay(PATH_PROBE_SETTLE_DELAY_MS);
 
-        await rm(testFile, { force: true });
-        await rm(testDir, { force: true, recursive: true });
+        await cleanupProbe(basePath, testDir, testFile);
 
         return true;
       } catch (e) {
@@ -181,8 +415,10 @@ const createDirectory = async (
       state.zipfile.readEntry();
     } catch (e) {
       if (attempt < 3) {
-        console.warn(
+        log(
           `[unzipFile] Failed to create directory, retrying (${attempt}/3): ${fullPath}`,
+          'electronFilesystem',
+          'warn',
         );
         await new Promise((r) => {
           setTimeout(r, 100 * attempt);
@@ -250,8 +486,10 @@ const processFileEntry = async (
         e instanceof Error &&
         (e as { code?: string }).code === 'ENOENT'
       ) {
-        console.warn(
+        log(
           `[unzipFile] ENOENT during pipeline, retrying (${attempt}/3): ${fullPath}`,
+          'electronFilesystem',
+          'warn',
         );
         await new Promise((r) => {
           setTimeout(r, 100 * attempt);

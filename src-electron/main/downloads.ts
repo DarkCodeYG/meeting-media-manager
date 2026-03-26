@@ -3,6 +3,7 @@ import type { ElectronDownloadManager as EDMType } from 'electron-dl-manager';
 import { getCountriesForTimezone } from 'countries-and-timezones';
 import { app } from 'electron';
 import { ensureDir } from 'fs-extra/esm';
+import { setTimeout as delay } from 'node:timers/promises';
 import { quitStatus } from 'src-electron/main/session';
 import {
   captureElectronError,
@@ -10,9 +11,21 @@ import {
 } from 'src-electron/main/utils';
 import { sendToWindow } from 'src-electron/main/window/window-base';
 import { mainWindowInfo } from 'src-electron/main/window/window-main';
+import { log } from 'src/shared/vanilla';
 import upath from 'upath';
 
 const { basename } = upath;
+
+const ENSURE_DIR_RETRYABLE_CODES = new Set([
+  'EACCES',
+  'EBUSY',
+  'ENOENT',
+  'EPERM',
+]);
+const ENSURE_DIR_RETRY_COUNT = 3;
+const ENSURE_DIR_RETRY_DELAY_MS = 75;
+
+const getErrorCode = (error: unknown) => (error as { code?: string })?.code;
 
 enum DownloadState {
   ACTIVE = 'ACTIVE',
@@ -57,6 +70,28 @@ interface OngoingDownload {
   lowPriority: boolean;
   state: DownloadState;
   uuid: string;
+}
+
+async function ensureDirWithRetry(dir: string) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= ENSURE_DIR_RETRY_COUNT; attempt += 1) {
+    try {
+      await ensureDir(dir);
+      return;
+    } catch (error) {
+      lastError = error;
+      const code = getErrorCode(error);
+      const shouldRetry =
+        process.platform === 'win32' &&
+        ENSURE_DIR_RETRYABLE_CODES.has(code ?? '') &&
+        attempt < ENSURE_DIR_RETRY_COUNT;
+      if (!shouldRetry) break;
+      await delay(ENSURE_DIR_RETRY_DELAY_MS);
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -154,7 +189,11 @@ function logQueueBlockReason(
   hasHighPriorityActiveDownload: boolean,
 ): void {
   if (itemType === null && hasHighPriorityActiveDownload) {
-    console.log('High priority active. Not processing low priority items.');
+    log(
+      'High priority active. Not processing low priority items.',
+      'electronDownloads',
+      'log',
+    );
   }
 }
 
@@ -296,7 +335,7 @@ export async function downloadFile(
   )
     return null;
   try {
-    await ensureDir(saveDir);
+    await ensureDirWithRetry(saveDir);
 
     if (!destFilename) destFilename = basename(url);
 
@@ -331,7 +370,14 @@ export async function downloadFile(
       downloadQueue.push(fileToDownload);
     }
 
-    console.log('fileToDownload', fileToDownload, 'lowPriority', lowPriority);
+    log(
+      'fileToDownload',
+      'electronDownloads',
+      'log',
+      fileToDownload,
+      'lowPriority',
+      lowPriority,
+    );
 
     // Trigger queue processing
     processQueue();
@@ -388,8 +434,10 @@ export async function isDownloadComplete(downloadId: string) {
 function stopLowPriorityDownloads() {
   const activeLowPriority = getActiveLowPriorityDownloads();
   activeLowPriority.forEach((download, key) => {
-    console.log(
+    log(
       'Pausing download to free slot:',
+      'electronDownloads',
+      'log',
       download.uuid || 'no-uuid',
       key,
     );
@@ -594,7 +642,14 @@ async function processQueue() {
 
   // Exit early if max active downloads reached
   if (!hasAvailableSlots(activeCount, maxActiveDownloads)) {
-    console.log('Queue full. Active:', activeCount, 'Max:', maxActiveDownloads);
+    log(
+      'Queue full. Active:',
+      'electronDownloads',
+      'log',
+      activeCount,
+      'Max:',
+      maxActiveDownloads,
+    );
     return;
   }
 
@@ -680,11 +735,11 @@ async function startDownload(
   });
 
   try {
-    console.log('Starting download via manager:', url);
+    log('Starting download via manager:', 'electronDownloads', 'log', url);
     const downloadId = await manager.download({
       callbacks: {
         onDownloadCancelled: async () => {
-          console.log('Download cancelled:', url);
+          log('Download cancelled:', 'electronDownloads', 'log', url);
           sendToWindow(mainWindowInfo.mainWindow, 'downloadCancelled', {
             id: key,
           });
@@ -692,7 +747,7 @@ async function startDownload(
           processQueue();
         },
         onDownloadCompleted: async ({ item }) => {
-          console.log('Download completed:', url);
+          log('Download completed:', 'electronDownloads', 'log', url);
           sendToWindow(mainWindowInfo.mainWindow, 'downloadCompleted', {
             filePath: item.getSavePath(),
             id: key,
@@ -708,7 +763,7 @@ async function startDownload(
           });
         },
         onDownloadStarted: async ({ item, resolvedFilename }) => {
-          console.log('Download started:', url);
+          log('Download started:', 'electronDownloads', 'log', url);
           sendToWindow(mainWindowInfo.mainWindow, 'downloadStarted', {
             filename: resolvedFilename,
             id: key,
@@ -717,7 +772,7 @@ async function startDownload(
         },
         onError: async (err, downloadData) => {
           if (quitStatus.isAppQuitting) return;
-          console.log('Download error:', url);
+          log('Download error:', 'electronDownloads', 'log', url);
           captureElectronError(err, {
             contexts: {
               fn: {

@@ -2,6 +2,7 @@ import type { PublicationFetcher } from 'src/types';
 
 import { Buffer } from 'buffer/';
 import { errorCatcher } from 'src/helpers/error-catcher';
+import { log } from 'src/shared/vanilla';
 import { getPubId } from 'src/utils/jw';
 
 const {
@@ -16,11 +17,16 @@ const {
   readdir,
 } = globalThis.electronApi;
 
-const isUsablePathPromises: Record<string, Promise<boolean>> = {};
+const isUsablePathPromises = new Map<string, Promise<boolean>>();
 const isUsablePath = (path: string) => {
-  if (path in isUsablePathPromises) return isUsablePathPromises[path];
-  isUsablePathPromises[path] = isUsablePathRaw(path);
-  return isUsablePathPromises[path];
+  if (isUsablePathPromises.has(path)) {
+    return isUsablePathPromises.get(path) as Promise<boolean>;
+  }
+  const promise = isUsablePathRaw(path).finally(() => {
+    isUsablePathPromises.delete(path);
+  });
+  isUsablePathPromises.set(path, promise);
+  return promise;
 };
 const {
   ensureDir,
@@ -53,9 +59,19 @@ export const getCachedUserDataPath = async (): Promise<string> => {
 
   // Fast path: already resolved
   if (defaultDataPath) {
-    if (!customPath || defaultDataPath === customPath) {
+    if (
+      (!customPath || defaultDataPath === customPath) &&
+      (await isUsablePath(defaultDataPath))
+    ) {
       return defaultDataPath;
     }
+    log(
+      '📁 Cached cache path became unusable. Resolving again.',
+      'filesystem',
+      'warn',
+      defaultDataPath,
+    );
+    defaultDataPath = null;
   }
 
   // Try custom path first
@@ -65,13 +81,18 @@ export const getCachedUserDataPath = async (): Promise<string> => {
     (await isUsablePath(customPath))
   ) {
     defaultDataPath = customPath;
-    console.log('📁 Using custom cache path:', customPath);
+    log('📁 Using custom cache path:', 'filesystem', 'log', customPath);
     return defaultDataPath;
   }
 
   // Fallback to resolved app data path
   defaultDataPath = await getAppDataPath();
-  console.log('📁 Using default app data path as cache path:', defaultDataPath);
+  log(
+    '📁 Using default app data path as cache path:',
+    'filesystem',
+    'log',
+    defaultDataPath,
+  );
   return defaultDataPath;
 };
 
