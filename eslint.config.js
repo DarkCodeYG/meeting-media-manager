@@ -39,7 +39,15 @@ export default defineConfigWithVueTs([
       '@typescript-eslint/no-import-type-side-effects': 'error',
       '@typescript-eslint/no-loop-func': 'error',
       'default-param-last': 'off',
+      'no-console': 'error',
       'no-loop-func': 'off',
+    },
+  },
+
+  {
+    files: ['docs/**/*.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
 

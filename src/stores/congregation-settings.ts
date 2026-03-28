@@ -3,7 +3,7 @@ import type { SettingsValues } from 'src/types';
 
 import { defineStore } from 'pinia';
 import { defaultSettings } from 'src/constants/settings';
-import { uuid } from 'src/shared/vanilla';
+import { log, uuid } from 'src/shared/vanilla';
 import { wasUpdateInstalled } from 'src/utils/fs';
 
 interface Store {
@@ -34,7 +34,6 @@ export const useCongregationSettingsStore = defineStore(
         }
       },
       updateCongregationsWithMissingSettings() {
-        console.group('🏢 Congregation Settings Update');
         let updatedCount = 0;
         const updates: {
           after: Partial<Record<string, unknown>>;
@@ -47,19 +46,20 @@ export const useCongregationSettingsStore = defineStore(
           const congregationIds = Object.keys(this.congregations);
 
           if (congregationIds.length === 0) {
-            console.log('🏢 No congregations found to update');
-            console.groupEnd();
+            log('No congregations found to update', 'congregation');
             return { updatedCount, updates };
           }
 
           congregationIds.forEach((congId) => {
-            console.group(`🏢 Processing Congregation ${congId}`);
             try {
               const congregation = this.congregations[congId];
 
               if (!congregation) {
-                console.warn(`Congregation ${congId} not found, skipping`);
-                console.groupEnd();
+                log(
+                  `Congregation ${congId} not found, skipping`,
+                  'congregation',
+                  'warn',
+                );
                 return;
               }
 
@@ -92,33 +92,32 @@ export const useCongregationSettingsStore = defineStore(
                   updatedKeys,
                 });
 
-                console.log(
-                  `🏢 Updated congregation ${congId} with missing settings`,
-                  'Before:',
-                  before,
-                  'After:',
-                  after,
+                log(
+                  `Updated congregation ${congId} with missing settings. Before: ${JSON.stringify(before)}, After: ${JSON.stringify(after)}`,
+                  'congregation',
                 );
               }
-              console.groupEnd();
             } catch (error) {
-              console.log(`❌ Error updating congregation ${congId}:`, error);
-              console.groupEnd();
+              log(
+                `Error updating congregation ${congId}: ${error}`,
+                'congregation',
+                'error',
+              );
             }
           });
 
           if (updatedCount > 0) {
-            console.log(
-              `✅ Successfully updated ${updatedCount} congregations with missing settings`,
+            log(
+              `Successfully updated ${updatedCount} congregations with missing settings`,
+              'congregation',
             );
           }
         } catch (error) {
-          console.log(
-            '❌ Error updating congregations with missing settings:',
-            error,
+          log(
+            `Error updating congregations with missing settings: ${error}`,
+            'congregation',
+            'error',
           );
-        } finally {
-          console.groupEnd();
         }
 
         return { updatedCount, updates };

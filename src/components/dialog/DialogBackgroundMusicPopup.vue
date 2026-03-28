@@ -114,6 +114,7 @@ import {
 } from 'src/helpers/date';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { downloadBackgroundMusic } from 'src/helpers/jw-media';
+import { log } from 'src/shared/vanilla';
 import { formatTime } from 'src/utils/time';
 import { useCurrentStateStore } from 'stores/current-state';
 import { computed, ref, useTemplateRef, watch } from 'vue';
@@ -300,7 +301,7 @@ watchImmediate(
       state !== 'music.stopping' &&
       state !== 'music.playing'
     ) {
-      console.log('🎵 Auto-starting background music');
+      log('Auto-starting background music', 'backgroundMusic');
       playMusic();
     }
   },
@@ -309,7 +310,7 @@ watchImmediate(
 // Main auto-stop logic
 watch(shouldAutoStop, (shouldStop) => {
   if (shouldStop && musicState.value !== 'music.stopping') {
-    console.log('⏹️ Auto-stopping background music before meeting');
+    log('Auto-stopping background music before meeting', 'backgroundMusic');
     stopMusic();
   }
 });
@@ -333,19 +334,17 @@ const musicPopup = useTemplateRef<QMenu>('musicPopup');
  * Initializes and plays background music
  */
 async function playMusic() {
-  console.group('🎵 Background Music Playback');
   try {
     if (
       !currentSettings.value?.enableMusicButton ||
       musicPlaying.value ||
       !musicPlayer.value
     ) {
-      console.log('⏭️ Music playback conditions not met');
-      console.groupEnd();
+      log('Music playback conditions not met', 'backgroundMusic');
       return;
     }
 
-    console.log('🎵 Starting background music');
+    log('Starting background music', 'backgroundMusic');
     musicState.value = 'music.starting';
     downloadBackgroundMusic();
     songList.value = [];
@@ -396,32 +395,31 @@ async function playMusic() {
     if (!nextSongUrl) throw new Error('No next song found');
 
     musicPlayerSource.value.src = nextSongUrl;
-    console.log(`🎵 Playing music from ${nextSongUrl}`);
+    log(`Playing music from ${nextSongUrl}`, 'backgroundMusic');
 
     musicPlayer.value?.load();
 
     // Apply start offset if we calculated one (for meeting day timing)
     const startTime = initialStartOffset.value;
     if (startTime > 0) {
-      console.log(
-        `⏩ Starting ${startTime.toFixed(1)}s into first song to align with meeting time`,
+      log(
+        `Starting ${startTime.toFixed(1)}s into first song to align with meeting time`,
+        'backgroundMusic',
       );
     }
     currentTime.value = startTime;
 
     musicPlayer.value?.play();
-    console.log(`🎵 Music started at ${startTime} seconds`);
+    log(`Music started at ${startTime} seconds`, 'backgroundMusic');
 
     // Fade in volume
     const targetVolume = (currentSettings.value?.musicVolume ?? 100) / 100;
-    console.log(`🔊 Fading to volume level ${targetVolume}`);
+    log(`Fading to volume level ${targetVolume}`, 'backgroundMusic');
     fadeToVolumeLevel(targetVolume, 1);
   } catch (error) {
-    console.log('❌ Error starting music:', error);
+    log(`Error starting music: ${error}`, 'backgroundMusic', 'error');
     musicState.value = 'music.error';
     errorCatcher(error);
-  } finally {
-    console.groupEnd();
   }
 }
 
@@ -429,24 +427,21 @@ async function playMusic() {
  * Stops background music with fadeout
  */
 function stopMusic(manualStop = false) {
-  console.group('⏹️ Background Music Stop');
   try {
-    console.log('⏹️ Stopping background music');
+    log('Stopping background music', 'backgroundMusic');
     if (!musicPlayer.value || musicPlayer.value.paused) {
-      console.log('⏭️ Music already stopped or no player');
-      console.groupEnd();
+      log('Music already stopped or no player', 'backgroundMusic');
       return;
     }
 
     musicState.value = 'music.stopping';
     fadeToVolumeLevel(0, 5);
   } catch (error) {
-    console.log('❌ Error stopping music:', error);
+    log(`Error stopping music: ${error}`, 'backgroundMusic', 'error');
     errorCatcher(error);
   } finally {
-    console.groupEnd();
     if (manualStop) {
-      console.log('⏹️ Music stopped manually');
+      log('Music stopped manually', 'backgroundMusic');
       musicAlreadyStoppedManually.value = true;
     }
   }
@@ -482,8 +477,9 @@ const handleMusicEnded = async () => {
  * Fades volume to a target level over specified seconds
  */
 const fadeToVolumeLevel = (targetVolume: number, fadeSeconds: number) => {
-  console.log(
-    `🔊 Fading to volume level ${targetVolume} over ${fadeSeconds} seconds`,
+  log(
+    `Fading to volume level ${targetVolume} over ${fadeSeconds} seconds`,
+    'backgroundMusic',
   );
 
   if (!musicPlayer.value) return;
@@ -572,7 +568,7 @@ watch(
   (newSrc) => {
     if (newSrc) {
       musicPlayer.value?.load();
-      console.log(`🎵 Music player source set to ${newSrc}`);
+      log(`Music player source set to ${newSrc}`, 'backgroundMusic');
     }
   },
 );
@@ -597,7 +593,7 @@ const toggleMusicListener = () => {
     if (musicPlaying.value) {
       stopMusic();
     } else {
-      console.log('👆 Music started manually');
+      log('Music started manually', 'backgroundMusic');
       playMusic();
     }
   } catch (error) {

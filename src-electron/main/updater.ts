@@ -10,9 +10,41 @@ import {
 } from 'src-electron/main/utils';
 import { sendToWindow } from 'src-electron/main/window/window-base';
 import { mainWindowInfo } from 'src-electron/main/window/window-main';
+import { log } from 'src/shared/vanilla';
 import upath from 'upath';
 
 const { join } = upath;
+
+const isIgnoredUpdaterLog = (message?: string) => {
+  if (!message) return false;
+
+  return (
+    message.includes('Cannot rename temp file to final file') ||
+    isIgnoredUpdateError(message)
+  );
+};
+
+const logUpdaterMessage = (
+  level: 'debug' | 'error' | 'info' | 'warn',
+  message: unknown,
+) => {
+  const normalizedMessage =
+    typeof message === 'string'
+      ? message
+      : message instanceof Error
+        ? message.message
+        : '';
+
+  if (isIgnoredUpdaterLog(normalizedMessage)) return;
+  log(message, 'electronUpdater', level);
+};
+
+const updaterLogger = {
+  debug: (message: unknown) => logUpdaterMessage('debug', message),
+  error: (message: unknown) => logUpdaterMessage('error', message),
+  info: (message: unknown) => logUpdaterMessage('info', message),
+  warn: (message: unknown) => logUpdaterMessage('warn', message),
+};
 
 export const getUpdatesDisabledPath = async () =>
   join(await getAppDataPath(), 'Global Preferences', 'disable-updates');
@@ -29,6 +61,7 @@ export async function initUpdater() {
   autoUpdater.allowDowngrade = true;
   autoUpdater.autoDownload = !IS_TEST;
   autoUpdater.autoInstallOnAppQuit = !IS_TEST;
+  autoUpdater.logger = updaterLogger;
 
   autoUpdater.on('error', async (error, message) => {
     if (IS_TEST) return;
@@ -52,17 +85,17 @@ export async function initUpdater() {
   });
 
   autoUpdater.on('update-available', (info) => {
-    console.log('Update available:', info);
+    log('Update available:', 'electronUpdater', 'log', info);
     sendToWindow(mainWindowInfo.mainWindow, 'update-available');
   });
 
   autoUpdater.on('download-progress', (info) => {
-    console.log('Update download progress:', info);
+    log('Update download progress:', 'electronUpdater', 'log', info);
     sendToWindow(mainWindowInfo.mainWindow, 'update-download-progress', info);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('Update downloaded:', info);
+    log('Update downloaded:', 'electronUpdater', 'log', info);
     sendToWindow(mainWindowInfo.mainWindow, 'update-downloaded');
   });
 
