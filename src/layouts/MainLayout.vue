@@ -1382,9 +1382,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   globalThis.removeEventListener('public-talk-title', handlePublicTalkTitle);
-  if (preMeetingClockInterval) {
-    clearInterval(preMeetingClockInterval);
-    preMeetingClockInterval = null;
+  if (preMeetingInterval) {
+    clearInterval(preMeetingInterval);
+    preMeetingInterval = null;
   }
 });
 
