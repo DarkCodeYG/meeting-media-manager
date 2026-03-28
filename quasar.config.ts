@@ -168,10 +168,7 @@ export default defineConfig((ctx) => {
         publish: ['github'],
         win: {
           icon: getIconPath('ico'),
-          target: [
-            { arch: ctx.debug ? 'x64' : ['x64', 'ia32'], target: 'nsis' },
-            'portable',
-          ],
+          target: [{ arch: 'x64', target: 'nsis' }],
         },
       },
       bundler: 'builder', // 'packager' or 'builder'
