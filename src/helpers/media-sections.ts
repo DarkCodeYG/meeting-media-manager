@@ -1,3 +1,4 @@
+import type { JwIconKeyword } from 'src/constants/jw-icons';
 import type {
   DateInfo,
   MediaItem,
@@ -8,6 +9,7 @@ import type {
 
 import { getMeetingSections, standardSections } from 'src/constants/media';
 import { isCoWeek } from 'src/helpers/date';
+import { log } from 'src/shared/vanilla';
 import { useCurrentStateStore } from 'src/stores/current-state';
 import { dateFromString, datesAreSame } from 'src/utils/date';
 
@@ -96,7 +98,7 @@ export const addSection = () => {
     items: [],
   });
 
-  console.log('✅ New section created:', {
+  log('✅ New section created:', 'mediaSections', 'log', {
     config: newSection,
     sectionId: newSectionId,
   });
@@ -126,7 +128,7 @@ export const deleteSection = (uniqueId: string) => {
     // Actually delete the section from mediaSections
     removeMediaSection(selectedDateObject.mediaSections, uniqueId);
 
-    console.log('✅ Section deleted:', {
+    log('✅ Section deleted:', 'mediaSections', 'log', {
       deletedSectionId: uniqueId,
       remainingSections: selectedDateObject.mediaSections.map(
         (s) => s.config.uniqueId,
@@ -147,7 +149,7 @@ export const getRandomColor = () => {
   return `rgb(${r}, ${g}, ${b})`;
 };
 
-export const isStandardSection = (section: string) => {
+export const isStandardSection = (section: MediaSectionIdentifier) => {
   if (!section) return false;
   return standardSections.includes(section);
 };
@@ -160,16 +162,16 @@ function getMeetingSectionConfigs(
   }
 
   // Sections that have icons
-  const iconSections = [
+  const iconSections: JwIconKeyword[] = [
     'ayfm',
     'lac',
     'tgw',
     'wt',
     'pt',
     'circuit-overseer',
-  ] as const;
+  ];
 
-  if ((iconSections as readonly string[]).includes(section)) {
+  if (iconSections.includes(section)) {
     return {
       jwIconKeyword: section,
       uniqueId: section,
@@ -361,8 +363,10 @@ export const saveWatchedMediaSectionOrder = async (
 
     // Update section order data for watched items
     mediaItems.forEach((item, index) => {
-      console.log(
+      log(
         '🔍 [saveWatchedMediaSectionOrder] Overwriting sortOrderOriginal',
+        'mediaSections',
+        'log',
         item,
         index,
       );
@@ -386,8 +390,10 @@ export const saveWatchedMediaSectionOrder = async (
       'utf-8',
     );
 
-    console.log(
+    log(
       `✅ Saved section order for ${sectionId} to ${sectionOrderFilePath}`,
+      'mediaSections',
+      'log',
     );
   } catch (error) {
     // Fail gracefully - if we can't save the order file, it's not a big deal
@@ -476,7 +482,7 @@ export const removeWatchedMediaSectionInfo = async (
         JSON.stringify(sectionOrderData, null, 2),
         'utf-8',
       );
-      console.log(`✅ Removed section info for ${filename}`);
+      log(`✅ Removed section info for ${filename}`, 'mediaSections', 'log');
     }
   } catch (error) {
     errorCatcher(error, {

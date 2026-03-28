@@ -15,6 +15,7 @@ import {
 import { urlVariables } from 'src-electron/main/session';
 import { captureElectronError, getIconPath } from 'src-electron/main/utils';
 import { StatefulBrowserWindow } from 'src-electron/main/window/window-state';
+import { log } from 'src/shared/vanilla';
 import upath from 'upath';
 
 const { join, resolve } = upath;
@@ -41,7 +42,7 @@ export function closeOtherWindows(source: BrowserWindow) {
  * @returns The created window
  */
 export function createWindow(
-  name: 'main' | 'media' | 'website' = 'main',
+  name: 'main' | 'media' | 'timer' | 'website' = 'main',
   options?: BrowserWindowConstructorOptions,
   websiteParams?: JwSiteParams,
 ) {
@@ -90,7 +91,12 @@ export function createWindow(
 
   // Show the window when it's ready
   win.on('ready-to-show', () => {
-    if (name !== 'media') win.show();
+    if (name === 'media') return;
+    if (name === 'timer') {
+      win.showInactive();
+      return;
+    }
+    win.show();
   });
 
   // Hide the menu bar
@@ -103,6 +109,9 @@ export function createWindow(
   switch (name) {
     case 'media':
       page = 'media-player';
+      break;
+    case 'timer':
+      page = 'timer';
       break;
     case 'website':
       if (websiteParams?.site) {
@@ -133,7 +142,7 @@ export function createWindow(
       if (devToolsOpenedCount <= 2) {
         win?.webContents.closeDevTools(); // Close devtools for the first two attempts
       } else {
-        console.debug('DevTools opened after 2 attempts'); // Log for debugging
+        log('DevTools opened after 2 attempts', 'electronWindow', 'debug'); // Log for debugging
       }
     });
   }

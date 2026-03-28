@@ -7,15 +7,21 @@ import {
   mediaWindowInfo,
   moveMediaWindowThrottled,
 } from 'src-electron/main/window/window-media';
+import {
+  moveTimerWindowThrottled,
+  timerWindowInfo,
+} from 'src-electron/main/window/window-timer';
+import { log } from 'src/shared/vanilla';
 
 let isScreenListenerInitialized = false;
 
 /**
- * Handles screen changes by moving the media window if necessary
+ * Handles screen changes by moving open presentation windows if necessary
  */
 const onDisplayChanged = () => {
   try {
     moveMediaWindowThrottled();
+    moveTimerWindowThrottled();
   } catch (e) {
     captureElectronError(e, {
       contexts: { fn: { name: 'onDisplayChanged' } },
@@ -25,7 +31,11 @@ const onDisplayChanged = () => {
 
 export const initScreenListeners = () => {
   if (isScreenListenerInitialized) {
-    console.log('🔍 [initScreenListeners] Already initialized, skipping');
+    log(
+      '🔍 [initScreenListeners] Already initialized, skipping',
+      'electronScreen',
+      'log',
+    );
     return;
   }
 
@@ -45,7 +55,11 @@ export const initScreenListeners = () => {
       screen.on('display-removed', onDisplayChanged);
       screen.on('display-metrics-changed', onDisplayChanged);
 
-      console.log('🔍 [initScreenListeners] Screen listeners initialized');
+      log(
+        '🔍 [initScreenListeners] Screen listeners initialized',
+        'electronScreen',
+        'log',
+      );
     })
     .catch((e) => {
       isScreenListenerInitialized = false;
@@ -98,6 +112,23 @@ export const getAllScreens = (): Display[] => {
     captureElectronError(e, {
       contexts: { fn: { name: 'getAllScreens', window: 'mediaWindow' } },
     });
+  }
+
+  if (timerWindowInfo.timerWindow) {
+    try {
+      const timerWindowScreen = displays.find(
+        (display) =>
+          timerWindowInfo.timerWindow &&
+          display.id ===
+            screen.getDisplayMatching(timerWindowInfo.timerWindow.getBounds())
+              .id,
+      );
+      if (timerWindowScreen) timerWindowScreen.timerWindow = true;
+    } catch (e) {
+      captureElectronError(e, {
+        contexts: { fn: { name: 'getAllScreens', window: 'timerWindow' } },
+      });
+    }
   }
 
   return displays;

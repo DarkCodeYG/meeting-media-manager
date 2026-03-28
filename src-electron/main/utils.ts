@@ -11,12 +11,12 @@ import {
 } from 'src-electron/constants';
 import { isUsablePath } from 'src-electron/main/fs';
 import { urlVariables } from 'src-electron/main/session';
+import { log } from 'src/shared/vanilla';
 import upath from 'upath';
 
 const { join, resolve } = upath;
 
 type CaptureCtx = Parameters<typeof captureException>[1];
-
 /**
  * Gets the current app version
  * @returns The app version
@@ -24,13 +24,12 @@ type CaptureCtx = Parameters<typeof captureException>[1];
 export function getAppVersion() {
   return IS_DEV ? version : app.getVersion();
 }
-
 /**
  * Returns the correct path for an icon based on the platform
  * @param icon The icon name
  * @returns The icon path
  */
-export function getIconPath(icon: 'beta' | 'icon' | 'media-player') {
+export function getIconPath(icon: 'beta' | 'icon' | 'media-player' | 'timer') {
   const extByPlatform: Record<string, string> = {
     darwin: 'icns',
     win32: 'ico',
@@ -59,43 +58,45 @@ export async function getSharedDataPath(): Promise<null | string> {
   const isMachineWide = isMachineWideInstallation();
 
   if (!isMachineWideAlreadyLogged) {
-    console.log(
+    log(
       `[getSharedDataPath] This app is ${isMachineWide ? '' : 'not '}installed machine-wide.`,
+      'electron',
+      'log',
     );
     isMachineWideAlreadyLogged = true;
   }
   if (!isMachineWide) return null;
 
-  let sharedPath = '';
-
-  console.log(`[getSharedDataPath] Platform is ${PLATFORM}`);
-  if (PLATFORM === 'win32') {
-    sharedPath = join(
-      process.env.ProgramData || String.raw`C:\ProgramData`,
-      PRODUCT_NAME || 'Meeting Media Manager',
-    );
-  } else if (PLATFORM === 'darwin') {
-    sharedPath = join(
-      '/Library/Application Support',
-      PRODUCT_NAME || 'Meeting Media Manager',
-    );
-  } else {
-    // Linux
-    sharedPath = join(
-      '/var/cache',
-      (PRODUCT_NAME || 'meeting-media-manager')
-        .toLowerCase()
-        .replaceAll(' ', '-'),
-    );
-  }
-  console.log(`[getSharedDataPath] Shared path is configured as ${sharedPath}`);
+  log(`[getSharedDataPath] Platform is ${PLATFORM}`, 'electron', 'log');
+  const sharedPath =
+    PLATFORM === 'win32'
+      ? join(
+          process.env.ProgramData || String.raw`C:\ProgramData`,
+          PRODUCT_NAME || 'Meeting Media Manager',
+        )
+      : PLATFORM === 'darwin'
+        ? join(
+            '/Library/Application Support',
+            PRODUCT_NAME || 'Meeting Media Manager',
+          )
+        : join(
+            '/var/cache',
+            (PRODUCT_NAME || 'meeting-media-manager')
+              .toLowerCase()
+              .replaceAll(' ', '-'),
+          );
+  log(
+    `[getSharedDataPath] Shared path is configured as ${sharedPath}`,
+    'electron',
+    'log',
+  );
 
   if (await isUsablePath(sharedPath)) {
-    console.log(`[getSharedDataPath] Shared path is usable`);
+    log(`[getSharedDataPath] Shared path is usable`, 'electron', 'log');
     return sharedPath;
   }
 
-  console.log(`[getSharedDataPath] Shared path is not usable`);
+  log(`[getSharedDataPath] Shared path is not usable`, 'electron', 'log');
   return null;
 }
 
@@ -229,6 +230,7 @@ export function isIgnoredUpdateError(
     ['504', 'Gateway'],
     ['504', 'HttpError'],
     ['60006', 'OSStatus'],
+    ['ENOENT', 'rename'],
     ['ENOENT', 'unlink'],
     ['EPERM', 'rename'],
     ['read-only', 'volume'],
@@ -423,8 +425,8 @@ export const fetchJsonFromMainProcess = async <T>(
  */
 export function captureElectronError(error: unknown, context?: CaptureCtx) {
   if (IS_DEV) {
-    console.error(error);
-    console.warn('context', context);
+    log(error, 'electron', 'error');
+    log('context', 'electron', 'warn', context);
   } else {
     captureException(error, context);
   }
@@ -462,8 +464,10 @@ export function addElectronBreadcrumb(
   breadcrumb: Parameters<typeof addBreadcrumb>[0],
 ) {
   if (IS_DEV) {
-    console.info(
+    log(
       `[Breadcrumb] ${breadcrumb.category}: ${breadcrumb.message}`,
+      'electron',
+      'info',
       breadcrumb.data,
     );
   } else {
