@@ -690,7 +690,37 @@ const cancelEdit = () => {
   editDialogOpen.value = false;
 };
 
-// PDF Report Generation
+// PDF Report Generation — uses English to avoid CJK font rendering issues in jsPDF
+const te = (key: string, params?: Record<string, unknown>) =>
+  t(key, params ?? {}, { locale: 'en' });
+
+const getEnglishPartLabel = (partValue: string): string => {
+  if (partValue.startsWith('ayfm-')) {
+    const i = partValue.split('-')[1];
+    const dur = partDurations.value[partValue as MeetingPart] || 14;
+    return te('ayfm-part', { duration: dur, part: i });
+  }
+  if (partValue.startsWith('lac-')) {
+    const i = partValue.split('-')[1];
+    const dur = partDurations.value[partValue as MeetingPart] || 15;
+    return te('lac-part', { duration: dur, part: i });
+  }
+  // Map known part values to translation keys
+  const keyMap: Record<string, string> = {
+    'bible-reading': 'bible-reading',
+    cbs: 'cbs',
+    'co-final-talk': 'co-final-talk',
+    'co-service-talk': 'co-service-talk',
+    'concluding-comments': 'concluding-comments',
+    gems: 'gems',
+    introduction: 'introduction',
+    'public-talk': 'public-talk',
+    treasures: 'treasures-talk',
+    wt: 'wt',
+  };
+  return te(keyMap[partValue] ?? partValue);
+};
+
 const exportPdfReport = async () => {
   const { jsPDF } = await import('jspdf');
   const { autoTable } = await import('jspdf-autotable');
@@ -698,15 +728,15 @@ const exportPdfReport = async () => {
   const doc = new jsPDF();
 
   const meetingDate = selectedDateObject.value?.date
-    ? new Date(selectedDateObject.value.date).toLocaleDateString()
+    ? new Date(selectedDateObject.value.date).toLocaleDateString('en-US')
     : 'N/A';
 
   doc.setFontSize(18);
   doc.text(`Meeting Report - ${meetingDate}`, 14, 22);
 
   const tableColumn = [
-    t('meeting-part'),
-    `${t('start-time')} (hh:mm:ss)`,
+    'Meeting Part',
+    'Start (hh:mm:ss)',
     'End (hh:mm:ss)',
     'Duration (mm:ss)',
   ];
@@ -722,7 +752,7 @@ const exportPdfReport = async () => {
     const formattedDuration = getDuration(timings ?? null, duration);
 
     tableRows.push([
-      partOption.label,
+      getEnglishPartLabel(partValue),
       formattedStartTime,
       formattedEndTime,
       formattedDuration,
@@ -738,7 +768,7 @@ const exportPdfReport = async () => {
       3: { cellWidth: 30 },
     },
     head: [tableColumn],
-    headStyles: { fillColor: '#42A5F5' }, // Quasar primary color
+    headStyles: { fillColor: '#42A5F5' },
     startY: 30,
     styles: { cellPadding: 3, fontSize: 10 },
     theme: 'grid',

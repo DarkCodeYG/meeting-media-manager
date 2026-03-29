@@ -267,6 +267,7 @@ export interface SettingsValues {
   obsRememberPreviouslyUsedScene: boolean;
   obsSwitchSceneAfterMedia: boolean;
   pinyinSongFolder: null | string;
+  preMeetingClockMinutes: number;
   recordingEnable: boolean;
   recordingFolder: null | string;
   recordingStartShortcut: null | string;

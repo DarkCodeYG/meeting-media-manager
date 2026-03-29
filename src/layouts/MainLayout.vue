@@ -461,6 +461,19 @@ watch(
   },
 );
 
+const { post: postTimerLocale } = useBroadcastChannel<string, string>({
+  name: 'timer-locale',
+});
+
+// Respond to timer window locale requests
+const { data: timerLocaleRequest } = useBroadcastChannel<string, string>({
+  name: 'timer-locale-request',
+});
+
+watch(timerLocaleRequest, () => {
+  if (locale.value) postTimerLocale(locale.value);
+});
+
 whenever(
   () => currentSettings.value?.localAppLang,
   (newAppLang) => {
@@ -476,6 +489,7 @@ whenever(
       currentSettings.value.localAppLang = 'en';
     } else {
       locale.value = newAppLang;
+      postTimerLocale(newAppLang);
     }
   },
 );
@@ -1104,9 +1118,15 @@ watchImmediate(
 
 // FORK-MERGE: 포크 전용 - pre-meeting clock. 충돌 시 이 블록 유지.
 // Send pre-meeting clock remaining seconds to the media player page
-// 0 = hidden, >0 = remaining seconds before meeting start (max 300)
+// 0 = hidden, >0 = remaining seconds before meeting start
 const { post: postPreMeetingClock } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
+});
+const { post: postPreMeetingClockMinutes } = useBroadcastChannel<
+  number,
+  number
+>({
+  name: 'pre-meeting-clock-minutes',
 });
 const { post: postPreMeetingAnnouncement } = useBroadcastChannel<
   number,
@@ -1124,8 +1144,12 @@ const checkPreMeetingFeatures = () => {
 
   const remaining = remainingTimeBeforeMeetingStart();
 
-  // Clock: show within 5 minutes (300 seconds) before meeting start
-  if (clockEnabled && remaining > 0 && remaining <= 300) {
+  const clockMinutes = currentSettings.value?.preMeetingClockMinutes ?? 5;
+  const clockSeconds = clockMinutes * 60;
+  postPreMeetingClockMinutes(clockMinutes);
+
+  // Clock: show within configured minutes before meeting start
+  if (clockEnabled && remaining > 0 && remaining <= clockSeconds) {
     postPreMeetingClock(remaining);
   } else {
     postPreMeetingClock(0);
@@ -1460,6 +1484,7 @@ watchImmediate(
       postCurrentLang(String(currentState.currentLangObject.langcode));
     }
     checkPreMeetingClock();
+    if (locale.value) postTimerLocale(locale.value);
     if (!yeartextWatcherPaused.value) {
       postYeartext(yeartext.value);
     }
