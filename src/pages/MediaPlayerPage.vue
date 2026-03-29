@@ -34,29 +34,32 @@
       <div
         id="yeartext"
         class="center"
+        :class="{ 'yeartext-fade-out': yeartextFading }"
         :style="yeartextFontStyle"
-        v-html="sanitize(yeartext || '')"
+        v-html="sanitize(displayedYeartext || '')"
       />
       <!-- FORK-MERGE: 포크 전용 - pre-meeting clock UI. 충돌 시 이 블록 유지. -->
-      <div v-if="showPreMeetingClock" id="preMeetingClockContainer">
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div id="preMeetingClock" v-html="formattedCurrentTime" />
-        <div id="countdownTimerWrapper">
-          <div id="countdownTimer">
-            <svg viewBox="0 0 120 120">
-              <circle class="countdown-track" cx="60" cy="60" r="54" />
-              <circle
-                class="countdown-progress"
-                cx="60"
-                cy="60"
-                r="54"
-                :style="{ strokeDashoffset: countdownDashOffset }"
-              />
-            </svg>
-            <span class="countdown-text">{{ countdownText }}</span>
+      <Transition name="fade-clock">
+        <div v-if="showPreMeetingClock" id="preMeetingClockContainer">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div id="preMeetingClock" v-html="formattedCurrentTime" />
+          <div id="countdownTimerWrapper">
+            <div id="countdownTimer">
+              <svg viewBox="0 0 120 120">
+                <circle class="countdown-track" cx="60" cy="60" r="54" />
+                <circle
+                  class="countdown-progress"
+                  cx="60"
+                  cy="60"
+                  r="54"
+                  :style="{ strokeDashoffset: countdownDashOffset }"
+                />
+              </svg>
+              <span class="countdown-text">{{ countdownText }}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </Transition>
       <div
         v-if="!hideMediaLogo && jwIconsFontLoaded"
         id="yeartextLogoContainer"
@@ -197,6 +200,7 @@ import {
   setElementFont,
 } from 'src/helpers/fonts';
 import { createTemporaryNotification } from 'src/helpers/notifications';
+import { log } from 'src/shared/vanilla';
 import { isAudio, isImage, isVideo } from 'src/utils/media';
 import { useJwStore } from 'stores/jw';
 import {
@@ -243,7 +247,7 @@ $q.iconMapFn = (iconName) => {
 const cleanupMediaElement = (element: HTMLMediaElement | null | undefined) => {
   if (!element) return;
 
-  console.log('🎬 [cleanupMediaElement] Cleaning up media element');
+  log('[cleanupMediaElement] Cleaning up media element', 'mediaPlayer');
 
   try {
     // Stop playback
@@ -369,7 +373,7 @@ whenever(
   () => mediaRepeatNow.value,
   () => {
     if (currentMediaElement.value) {
-      console.log('🎬 [mediaRepeatNow] Forcing replay of current item');
+      log('[mediaRepeatNow] Forcing replay of current item', 'mediaPlayer');
       currentMediaElement.value.currentTime = customMin.value;
       playMediaElement();
     }
@@ -494,8 +498,10 @@ watch(
   () => mediaCustomDuration.value,
   (newVal, oldVal) => {
     if (newVal !== oldVal && currentMediaElement.value) {
-      console.log(
-        '🎬 [mediaCustomDuration] Duration changed, seeking to:',
+      log(
+        '[mediaCustomDuration] Duration changed, seeking to:',
+        'mediaPlayer',
+        'log',
         customMin.value,
       );
       isEnding.value = false;
@@ -530,8 +536,9 @@ const triggerPlay = (force = false) => {
     return;
   }
 
-  console.log(
-    `🎬 [triggerPlay] Attempting to play video: ${mediaPlayingUrl.value}, readyState: ${currentMediaElement.value.readyState}, paused: ${currentMediaElement.value.paused}`,
+  log(
+    `[triggerPlay] Attempting to play video: ${mediaPlayingUrl.value}, readyState: ${currentMediaElement.value.readyState}, paused: ${currentMediaElement.value.paused}`,
+    'mediaPlayer',
   );
 
   currentMediaElement.value.play().catch((error: Error) => {
@@ -558,8 +565,10 @@ const playMediaElement = (wasPaused = false, websiteStream = false) => {
     return;
   }
 
-  console.log(
-    '🎬 [playMediaElement] Setting up video playback',
+  log(
+    '[playMediaElement] Setting up video playback',
+    'mediaPlayer',
+    'log',
     wasPaused,
     websiteStream,
     mediaAction.value,
@@ -570,7 +579,7 @@ const playMediaElement = (wasPaused = false, websiteStream = false) => {
   }
 
   currentMediaElement.value.oncanplaythrough = () => {
-    console.log('🎬 [playMediaElement] Video can play through');
+    log('[playMediaElement] Video can play through', 'mediaPlayer');
     triggerPlay(websiteStream);
   };
 
@@ -580,7 +589,7 @@ const playMediaElement = (wasPaused = false, websiteStream = false) => {
     const checkAndPlay = () => {
       const element = currentMediaElement.value;
       if (element && mediaAction.value === 'play' && element.paused) {
-        console.log('🎬 [playMediaElement] Fallback: triggering play');
+        log('[playMediaElement] Fallback: triggering play', 'mediaPlayer');
         triggerPlay();
       }
     };
@@ -593,15 +602,20 @@ const playMediaElement = (wasPaused = false, websiteStream = false) => {
 };
 
 const endOrLoop = () => {
-  console.log('🎬 [endOrLoop] Video ended, repeat:', mediaRepeat.value);
+  log(
+    '[endOrLoop] Video ended, repeat:',
+    'mediaPlayer',
+    'log',
+    mediaRepeat.value,
+  );
   if (mediaRepeat.value) {
-    console.log('🎬 [endOrLoop] Looping video');
+    log('[endOrLoop] Looping video', 'mediaPlayer');
     if (currentMediaElement.value) {
       currentMediaElement.value.currentTime = customMin.value;
       playMediaElement();
     }
   } else {
-    console.log('🎬 [endOrLoop] Posting ended state');
+    log('[endOrLoop] Posting ended state', 'mediaPlayer');
     postLastEndTimestamp(Date.now());
     // Don't clear mediaCustomDuration immediately to avoid race condition
     // It will be cleared when the media state is handled by the main window
@@ -609,7 +623,7 @@ const endOrLoop = () => {
 };
 
 const handleVideoPause = () => {
-  console.log('⏸️ [handleVideoPause] Video paused');
+  log('[handleVideoPause] Video paused', 'mediaPlayer');
   try {
     postCurrentTime(currentMediaElement.value?.currentTime || 0);
   } catch (e) {
@@ -618,8 +632,10 @@ const handleVideoPause = () => {
 };
 
 const handleVideoCanPlay = () => {
-  console.log(
-    '🔄 [handleVideoCanPlay] Video can play',
+  log(
+    '[handleVideoCanPlay] Video can play',
+    'mediaPlayer',
+    'log',
     mediaAction.value,
     currentMediaElement.value?.paused,
     currentMediaElement.value?.readyState,
@@ -635,7 +651,7 @@ const handleVideoCanPlay = () => {
     // Add a small delay to ensure the video is fully ready
     setTimeout(() => {
       if (mediaAction.value === 'play' && currentMediaElement.value?.paused) {
-        console.log('🎬 [handleVideoCanPlay] Triggering play after delay');
+        log('[handleVideoCanPlay] Triggering play after delay', 'mediaPlayer');
         triggerPlay();
       }
     }, 50);
@@ -646,8 +662,10 @@ const fadeOutDurationInSeconds = 0.3;
 const fadeOutDurationInMilliseconds = fadeOutDurationInSeconds * 1000;
 
 const playMedia = () => {
-  console.log(
-    '🔄 [playMedia] Playing media',
+  log(
+    '[playMedia] Playing media',
+    'mediaPlayer',
+    'log',
     mediaAction.value,
     currentMediaElement.value?.paused,
   );
@@ -719,7 +737,12 @@ const isTransitioning = ref(false);
 
 // Crossfade function to handle layer transitions
 const crossfadeToNewMedia = (newUrl: string) => {
-  console.log('🎬 [crossfadeToNewMedia] Starting crossfade to:', newUrl);
+  log(
+    '[crossfadeToNewMedia] Starting crossfade to:',
+    'mediaPlayer',
+    'log',
+    newUrl,
+  );
 
   // Determine which layer is currently live and which is not
   const currentLiveLayer = displayLayer1.value.isLive
@@ -758,7 +781,7 @@ const crossfadeToNewMedia = (newUrl: string) => {
 
 // Handle clearing media (fade out current layer)
 const clearCurrentMedia = () => {
-  console.log('🎬 [clearCurrentMedia] Clearing current media');
+  log('[clearCurrentMedia] Clearing current media', 'mediaPlayer');
 
   const currentLiveLayer = displayLayer1.value.isLive
     ? displayLayer1
@@ -768,7 +791,7 @@ const clearCurrentMedia = () => {
     // Skip zoom/pan animation when clearing media
     if (isImage(currentLiveLayer.value.url)) {
       skipZoomPanAnimation.value = true;
-      console.log('🎬 [clearCurrentMedia] Skipping zoom/pan animation');
+      log('[clearCurrentMedia] Skipping zoom/pan animation', 'mediaPlayer');
     }
 
     // Fade out the current layer
@@ -821,7 +844,14 @@ const clearCurrentMedia = () => {
 watch(
   () => mediaPlayingUrl.value,
   (newUrl, oldUrl) => {
-    console.log('🔄 [mediaPlayingUrl] URL changed:', oldUrl, '->', newUrl);
+    log(
+      '[mediaPlayingUrl] URL changed:',
+      'mediaPlayer',
+      'log',
+      oldUrl,
+      '->',
+      newUrl,
+    );
     isEnding.value = false;
 
     if (oldUrl && newUrl && !isAudio(newUrl)) {
@@ -844,7 +874,10 @@ watch(
 
       // For videos, ensure the element is properly reset when URL changes
       if ((isVideo(newUrl) || isAudio(newUrl)) && newUrl !== oldUrl) {
-        console.log('🎬 [mediaPlayingUrl] Resetting video element for new URL');
+        log(
+          '[mediaPlayingUrl] Resetting video element for new URL',
+          'mediaPlayer',
+        );
         // Pause current playback
         currentMediaElement.value.pause();
         // Reset current time
@@ -889,6 +922,25 @@ const { data: yeartext } = useBroadcastChannel<
   null | string | undefined
 >({
   name: 'yeartext',
+});
+
+// Fade animation for yeartext/talk title transitions
+const displayedYeartext = ref<null | string | undefined>('');
+const yeartextFading = ref(false);
+
+watch(yeartext, (newVal, oldVal) => {
+  if (!oldVal && newVal) {
+    // First load: show immediately
+    displayedYeartext.value = newVal;
+    return;
+  }
+  if (newVal === oldVal) return;
+  // Fade out → swap → fade in
+  yeartextFading.value = true;
+  setTimeout(() => {
+    displayedYeartext.value = newVal;
+    yeartextFading.value = false;
+  }, 400);
 });
 
 // Receive current writing script and language code for yeartext font selection
@@ -936,6 +988,12 @@ const yeartextFontStyle = computed(() =>
 const { data: preMeetingClockRemaining } = useBroadcastChannel<number, number>({
   name: 'pre-meeting-clock',
 });
+const { data: preMeetingClockMinutesData } = useBroadcastChannel<
+  number,
+  number
+>({
+  name: 'pre-meeting-clock-minutes',
+});
 const { data: preMeetingAnnouncementRemaining } = useBroadcastChannel<
   number,
   number
@@ -980,12 +1038,14 @@ const formattedCurrentTime = computed(() => {
   return `${digits} <span class="clock-period">${period}</span>`;
 });
 
-const COUNTDOWN_TOTAL = 300; // 5 minutes in seconds
+const countdownTotal = computed(
+  () => (preMeetingClockMinutesData.value ?? 5) * 60,
+);
 const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 54; // r=54
 
 const countdownDashOffset = computed(() => {
-  const elapsed = COUNTDOWN_TOTAL - remainingSeconds.value;
-  return (elapsed / COUNTDOWN_TOTAL) * CIRCLE_CIRCUMFERENCE;
+  const elapsed = countdownTotal.value - remainingSeconds.value;
+  return (elapsed / countdownTotal.value) * CIRCLE_CIRCUMFERENCE;
 });
 
 const countdownText = computed(() => {
@@ -1024,7 +1084,12 @@ watch(showPreMeetingClock, (show) => {
 watchDeep(
   () => zoomPanState.value,
   (newZoomPanState) => {
-    console.log('🎬 [zoomPanState] New zoom/pan state:', newZoomPanState);
+    log(
+      '[zoomPanState] New zoom/pan state:',
+      'mediaPlayer',
+      'log',
+      newZoomPanState,
+    );
     applyZoomPanState(newZoomPanState);
   },
 );
@@ -1235,8 +1300,10 @@ watchImmediate(
       somethingChanged.urlVariablesChanged ||
       somethingChanged.yeartextChanged
     ) {
-      console.log(
-        '🔄 [MediaPlayerPage] Setting initial values',
+      log(
+        '[MediaPlayerPage] Setting initial values',
+        'mediaPlayer',
+        'log',
         somethingChanged,
         oldValues,
         newValues,
@@ -1252,7 +1319,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  console.log('🎬 [MediaPlayerPage] onBeforeUnmount - cleaning up all media');
+  log(
+    '[MediaPlayerPage] onBeforeUnmount - cleaning up all media',
+    'mediaPlayer',
+  );
   cleanupMediaElement(mediaElement1.value);
   cleanupMediaElement(mediaElement2.value);
   if (clockInterval) {
@@ -1286,6 +1356,26 @@ onBeforeUnmount(() => {
   top: 63%;
   left: 0;
   right: 0;
+}
+
+/* Pre-meeting clock fade animation */
+.fade-clock-enter-active,
+.fade-clock-leave-active {
+  transition: opacity 0.8s ease;
+}
+
+.fade-clock-enter-from,
+.fade-clock-leave-to {
+  opacity: 0;
+}
+
+/* Yeartext / talk title fade animation */
+:deep(#yeartext) {
+  transition: opacity 0.4s ease;
+}
+
+:deep(#yeartext.yeartext-fade-out) {
+  opacity: 0;
 }
 
 .display-layer.is-audio {

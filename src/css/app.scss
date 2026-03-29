@@ -1,13 +1,5 @@
 // app global css in SCSS form
 
-@font-face {
-  font-family: 'Orbitron';
-  src: url('../assets/fonts/Orbitron.woff2') format('woff2');
-  font-weight: 400 900;
-  font-style: normal;
-  font-display: swap;
-}
-
 ::cue {
   font-family:
     'Microsoft YaHei', 'Malgun Gothic', 'PingFang SC', 'Apple SD Gothic Neo',
@@ -61,29 +53,31 @@
 }
 
 #preMeetingClock {
-  font-family: 'Orbitron', 'Inter Variable', 'Inter', sans-serif;
+  font-family: 'Inter Variable', 'Inter', sans-serif;
   color: white;
-  font-size: 6vw;
-  font-weight: 400;
+  font-size: 6.5vw;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
   text-align: center;
   opacity: 0.9;
 
   .clock-digit {
     display: inline-block;
-    width: 0.85em;
+    width: 0.65em;
     text-align: center;
   }
 
   .clock-colon {
     display: inline-block;
-    width: 0.35em;
+    width: 0.3em;
     text-align: center;
   }
 
   .clock-period {
     font-size: 0.5em;
     vertical-align: middle;
-    margin-left: 0.2em;
+    margin-left: 0.15em;
   }
 }
 
@@ -96,8 +90,8 @@
 
 #countdownTimer {
   position: relative;
-  width: 8vw;
-  height: 8vw;
+  width: 10vw;
+  height: 10vw;
 
   svg {
     width: 100%;
@@ -128,8 +122,8 @@
     transform: translate(-50%, -50%);
     font-family: 'Inter Variable', 'Inter', sans-serif;
     color: white;
-    font-size: 1.8vw;
-    font-weight: 300;
+    font-size: 2.2vw;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
     opacity: 0.9;
   }

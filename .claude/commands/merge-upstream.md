@@ -78,7 +78,22 @@ ls .github/workflows/custom-build.yml \
 
 삭제됐으면 `git checkout ORIG_HEAD -- <파일>` 로 복원한다.
 
-### 7단계: 커밋 & 푸시
+### 7단계: 포크 기능 회귀 버그 코드 리뷰
+
+**커밋 전 반드시 수행.** Explore 에이전트를 사용하여 포크 기능 회귀 테스트를 진행한다.
+
+검증 항목:
+
+1. **설정 정의** (`settings.ts`, `settings.d.ts`) — 포크 설정 전체 존재 + 타입 일치
+2. **포크 로직** (`media-sections.ts`, `MainLayout.vue`) — 강연 제목 보존, 베델 연사 섹션, 사전 시계 로직 온전한지
+3. **번역 키** (`en.json`, `ko.json`, `cmn-hans.json`) — 포크 전용 번역 키 누락 없는지
+4. **타입 속성** (`media.d.ts`) — `publicTalkTitle`, `publicTalkSpeaker` 등 포크 속성 존재
+5. **import/변수명** — 업스트림 변경으로 인한 참조 누락, 변수명 불일치 없는지
+6. **eslint** — `no-console` 등 린트 규칙 위반 없는지
+
+리뷰 결과를 사용자에게 보고한 후 커밋을 진행한다.
+
+### 8단계: 커밋 & 푸시
 
 ```bash
 git push

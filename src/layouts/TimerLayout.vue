@@ -8,15 +8,28 @@
 </template>
 
 <script setup lang="ts">
+import { useBroadcastChannel } from '@vueuse/core';
 import { useMeta } from 'quasar';
 import { initializeElectronApi } from 'src/helpers/electron-api-manager';
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { locale } = useI18n({ useScope: 'global' });
 
 initializeElectronApi('TimerLayout');
 
 useMeta({
   title: 'Timer',
   titleTemplate: (title) => `${title} - M³`,
+});
+
+// Receive locale from main window via BroadcastChannel
+const { data: timerLocale } = useBroadcastChannel<string, string>({
+  name: 'timer-locale',
+});
+
+watch(timerLocale, (lang) => {
+  if (lang) locale.value = lang;
 });
 
 onMounted(() => {
