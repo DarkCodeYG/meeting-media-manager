@@ -82,28 +82,6 @@ async function ensureDirWithRetry(dir: string) {
   throw lastError;
 }
 
-async function ensureDirWithRetry(dir: string) {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt <= ENSURE_DIR_RETRY_COUNT; attempt += 1) {
-    try {
-      await ensureDir(dir);
-      return;
-    } catch (error) {
-      lastError = error;
-      const code = getErrorCode(error);
-      const shouldRetry =
-        process.platform === 'win32' &&
-        ENSURE_DIR_RETRYABLE_CODES.has(code ?? '') &&
-        attempt < ENSURE_DIR_RETRY_COUNT;
-      if (!shouldRetry) break;
-      await delay(ENSURE_DIR_RETRY_DELAY_MS);
-    }
-  }
-
-  throw lastError;
-}
-
 /**
  * Finds the next low priority paused download to resume
  */
