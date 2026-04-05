@@ -46,7 +46,7 @@
 ## 빌드 방법
 
 ```sh
-export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
+export PATH="/opt/homebrew/opt/node@24/bin:$PATH"
 yarn install
 yarn generate:logos   # 최초 1회 또는 로고 변경 시
 yarn build

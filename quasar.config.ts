@@ -192,10 +192,10 @@ export default defineConfig((ctx) => {
 
           writeFileSync(
             join(unpackagedDir, '.yarnrc.yml'),
-            'nodeLinker: node-modules\nyarnPath: .yarn/releases/yarn-4.12.0.cjs\n',
+            'nodeLinker: node-modules\nyarnPath: .yarn/releases/yarn-4.13.0.cjs\n',
           );
 
-          const yarnBin = join(releaseDst, 'yarn-4.12.0.cjs');
+          const yarnBin = join(releaseDst, 'yarn-4.13.0.cjs');
           const result = spawnSync(
             process.execPath,
             [yarnBin, 'workspaces', 'focus', '--all', '--production'],
@@ -211,9 +211,8 @@ export default defineConfig((ctx) => {
         unPackagedInstallParams: ['--version'], // skip default install; we do it in beforePackaging
       },
       extendElectronMainConf: (esbuildConf) => {
-        // Output as CJS to avoid Node.js 22.19.0 ESM/CJS interop bug
-        // (cjsPreparseModuleExports crashes when importing built-in CJS modules like 'electron' via ESM)
-        // CJS format lets require('electron') use Electron's native module interception directly.
+        // Output as CJS to ensure Electron module interception works correctly.
+        // (Upstream removed this for Node 24, but we keep it for build stability.)
         esbuildConf.format = 'cjs';
 
         // Fix import.meta.url for CJS output (a few source files use it to resolve __dirname).
@@ -316,7 +315,6 @@ export default defineConfig((ctx) => {
         // Remove unneeded dependencies from production build
         Object.keys(pkg.dependencies).forEach((dep) => {
           if (!electronDeps.has(dep)) {
-            console.log(`Removing dependency: ${dep}`);
             // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete pkg.dependencies[dep];
           }
