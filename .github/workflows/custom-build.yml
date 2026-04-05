@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: 'yarn'
 
       - name: Install X11 development libraries (Linux only)
@@ -79,7 +79,22 @@ jobs:
           removeArtifacts: true
           artifacts: 'artifacts/**/*-x64.exe,artifacts/**/*-universal.dmg'
           body: |
-            ## Custom Build v${{ steps.version.outputs.version }}
+            ## 커스텀 빌드 v${{ steps.version.outputs.version }}
 
+            업스트림 v26.4.3-beta.2까지의 변경사항을 반영한 포크 빌드입니다.
+
+            ### 🛠️ 버그 수정 및 개선
+            - 업스트림 v26.4.3-beta.2까지의 변경사항 반영
+            - BrowserWindow 소멸 후 상태 업데이트 오류 수정
+            - 미디어 창 위치 경계값 검증 추가
+            - 타이머 창 위치 동기화 개선
+            - lodash 보안 업데이트, Vue 3.5.32, Electron 41.1.1 등 의존성 업데이트
+
+            ### 🍴 포크 전용 기능
+            - 집회 전 시계 (Orbitron 폰트)
+            - 베델 연사 방문 섹션 자동 생성
+            - 한국어/중국어 번역
+
+            ---
             Built from commit ${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
