@@ -3,6 +3,7 @@ import type { DateInfo, SettingsValues } from 'src/types';
 import { i18n } from 'boot/i18n';
 import { DAYS_IN_FUTURE } from 'src/constants/date';
 import { errorCatcher } from 'src/helpers/error-catcher';
+import { log } from 'src/shared/vanilla';
 import {
   addToDate,
   dateFromString,
@@ -329,8 +330,10 @@ function resetAllCongregations(
     (id) => id && Array.isArray(lookupPeriod[id]),
   );
 
-  console.log(
+  log(
     `🔄 [updateLookupPeriod] Resetting dynamic media for ${congregationIds.length} congregations`,
+    'dateHelpers',
+    'log',
   );
 
   for (const congId of congregationIds) {
@@ -352,8 +355,10 @@ function resetAllCongregations(
     }
   }
 
-  console.log(
+  log(
     '✅ [updateLookupPeriod] Dynamic media reset completed for all congregations',
+    'dateHelpers',
+    'log',
   );
 }
 
@@ -370,7 +375,8 @@ function resetDay(day: DateInfo) {
     }
 
     const removed = totalBefore - countMedia(day);
-    if (removed > 0) console.log(`🗑️ Removed ${removed} dynamic items`);
+    if (removed > 0)
+      log(`🗑️ Removed ${removed} dynamic items`, 'dateHelpers', 'log');
   } catch (error) {
     errorCatcher(error);
   }

@@ -6,6 +6,10 @@ on:
       checkout-latest:
         description: 'Checkout the latest changes from the repository'
         type: boolean
+      publish-release:
+        description: 'Publish build artifacts to GitHub Releases via electron-builder'
+        type: boolean
+        default: false
     secrets:
       APPLE_APP_SPECIFIC_PASSWORD:
         required: true
@@ -37,7 +41,8 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  lint:
+  quality:
+    name: Lint and test
     runs-on: ubuntu-latest
     steps:
       - name: Check out master branch
@@ -51,7 +56,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22.19.0
+          node-version: 24
           cache: 'yarn'
       - name: Install X11 development libraries (Linux only)
         if: runner.os == 'Linux'
@@ -60,10 +65,12 @@ jobs:
           sudo apt-get install -y libx11-dev libxtst-dev libxinerama-dev libx11-xcb-dev libxkbcommon-x11-dev libxss-dev libpng-dev libpng++-dev
       - name: Install dependencies
         run: yarn install
+      - name: Prepare Quasar
+        run: yarn quasar prepare
       - name: Lint files
-        run: |
-          yarn quasar prepare
-          yarn lint
+        run: yarn lint
+      - name: Run tests
+        run: yarn test:unit
   # fix-links:
   #   runs-on: ubuntu-latest
   #   steps:
@@ -76,7 +83,7 @@ jobs:
   #     - name: Setup Node
   #       uses: actions/setup-node@v6
   #       with:
-  #         node-version: 22
+  #         node-version: 24
   #         cache: 'yarn'
 
   #     - name: Install dependencies
@@ -96,37 +103,9 @@ jobs:
   #           git commit -m "fix: automatically fix documentation links [skip ci]"
   #           git push origin HEAD:${{ github.head_ref || github.ref_name }}
   #         fi
-  test:
-    runs-on: ubuntu-latest
-    # needs: fix-links
-    steps:
-      - name: Check out master branch
-        if: ${{ inputs.checkout-latest == true }}
-        uses: actions/checkout@v6
-        with:
-          ref: master
-      - name: Check out Git repository
-        if: ${{ inputs.checkout-latest == false }}
-        uses: actions/checkout@v6
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22.19.0
-          cache: 'yarn'
-      - name: Install X11 development libraries (Linux only)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libx11-dev libxtst-dev libxinerama-dev libx11-xcb-dev libxkbcommon-x11-dev libxss-dev libpng-dev libpng++-dev
-      - name: Install dependencies
-        run: yarn install
-      - name: Run tests
-        run: |
-          yarn quasar prepare
-          yarn test:unit
   build:
     runs-on: ${{ matrix.os }}
-    needs: [lint, test]
+    needs: [quality]
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -142,7 +121,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22.19.0
+          node-version: 24
           cache: 'yarn'
       - name: Install X11 development libraries (Linux only)
         if: runner.os == 'Linux'
@@ -176,12 +155,12 @@ jobs:
       - name: Run security find-identity -v
         if: runner.os == 'macOS' && github.actor != 'dependabot[bot]'
         run: security find-identity -v
-      - name: Build and Publish Electron App
+      - name: Build Electron App
         id: build
         run: |
           yarn generate:icons
           yarn generate:logos
-          yarn build
+          yarn build -- --publish=${{ inputs.publish-release && 'always' || 'never' }}
         continue-on-error: ${{ runner.os == 'macOS' }}
         env:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -195,7 +174,7 @@ jobs:
         if: runner.os == 'macOS' && steps.build.outcome == 'failure'
         run: |
           echo "::warning::macOS notarization failed — likely an expired agreement. Producing unsigned build."
-          yarn build
+          yarn build -- --publish=${{ inputs.publish-release && 'always' || 'never' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -206,6 +185,7 @@ jobs:
           rm -f $RUNNER_TEMP/build_certificate.p12
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
       - name: Upload artifacts
+        if: ${{ !inputs.publish-release }}
         uses: actions/upload-artifact@v7
         with:
           name: M³ test build for ${{ matrix.os == 'macos-latest' && 'macOS' || matrix.os == 'windows-latest' && 'Windows' || 'Linux' }}

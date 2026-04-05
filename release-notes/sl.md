@@ -4,6 +4,12 @@
 
 Za celoten seznam sprememb med različicami si oglejte našo datoteko CHANGELOG.md na GitHubu.
 
+## v26.4.0
+
+### ✨ Nove funkcije
+
+- ✨ **Merilnik časa za shode**: Dodana je bila nova funkcija za merjenje časa na shodih. Ta možnost je neobvezna in jo lahko vklopiš v naprednih nastavitvah, če to želiš. Merilnik časa se lahko uporabi, da upravljalec multimedijske vsebine spremlja čas, porabljen za posamezne dele shoda, ali da se čas, porabljen za trenutni del shoda, prikaže na posebnem zaslonu, ki je viden le govorniku.
+
 ## v26.3.0
 
 ### ✨ Nove funkcije

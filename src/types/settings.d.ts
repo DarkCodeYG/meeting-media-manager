@@ -111,12 +111,14 @@ export interface SettingsGroup {
   name: keyof MessageSchema;
   order?: number;
 }
+
 export type SettingsGroupKey =
   | 'advanced'
   | 'app'
   | 'congregationMeetings'
   | 'integrations'
   | 'mediaRetrievalPlayback';
+
 export type SettingsGroups = Record<SettingsGroupKey, SettingsGroup>;
 
 export interface SettingsItem {

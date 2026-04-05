@@ -48,12 +48,6 @@ interface DownloadQueueItem {
   url: string;
 }
 
-interface DownloadQueueItem {
-  destFilename: string;
-  saveDir: string;
-  url: string;
-}
-
 interface GeoInfo {
   countryCode: string;
 }
@@ -61,15 +55,31 @@ interface GeoInfo {
 interface OngoingDownload {
   item: DownloadQueueItem;
   lowPriority: boolean;
+  pauseRequested?: boolean;
   state: DownloadState;
   uuid: string;
 }
 
-interface OngoingDownload {
-  item: DownloadQueueItem;
-  lowPriority: boolean;
-  state: DownloadState;
-  uuid: string;
+async function ensureDirWithRetry(dir: string) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= ENSURE_DIR_RETRY_COUNT; attempt += 1) {
+    try {
+      await ensureDir(dir);
+      return;
+    } catch (error) {
+      lastError = error;
+      const code = getErrorCode(error);
+      const shouldRetry =
+        process.platform === 'win32' &&
+        ENSURE_DIR_RETRYABLE_CODES.has(code ?? '') &&
+        attempt < ENSURE_DIR_RETRY_COUNT;
+      if (!shouldRetry) break;
+      await delay(ENSURE_DIR_RETRY_DELAY_MS);
+    }
+  }
+
+  throw lastError;
 }
 
 async function ensureDirWithRetry(dir: string) {
@@ -101,7 +111,7 @@ function findLowPriorityPausedDownload(
   pausedDownloads: Map<string, OngoingDownload>,
 ): null | { download: OngoingDownload; key: string } {
   for (const [key, download] of pausedDownloads.entries()) {
-    if (download.uuid) {
+    if (download.lowPriority && download.uuid) {
       return { download, key };
     }
   }
@@ -443,11 +453,9 @@ function stopLowPriorityDownloads() {
     );
     if (!manager) return;
 
-    // Always mark as PAUSED so if the download ID comes in later, it catches it
-    download.state = DownloadState.PAUSED;
-
     if (download.uuid) {
       try {
+        download.state = DownloadState.PAUSED;
         manager.pauseDownload(download.uuid);
       } catch (error) {
         captureElectronError(error, {
@@ -460,6 +468,9 @@ function stopLowPriorityDownloads() {
           },
         });
       }
+    } else {
+      // UUID is not available yet; request pause once the manager returns it
+      download.pauseRequested = true;
     }
   });
 }
@@ -806,8 +817,10 @@ async function startDownload(
     if (current) {
       current.uuid = downloadId;
 
-      // If it was paused while initializing (race condition), pause it now
-      if (current.state === DownloadState.PAUSED) {
+      // If pause was requested while initializing (race condition), pause now
+      if (current.pauseRequested) {
+        current.pauseRequested = false;
+        current.state = DownloadState.PAUSED;
         manager.pauseDownload(downloadId);
       }
     }

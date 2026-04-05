@@ -4,6 +4,12 @@
 
 För den fullständiga listan över ändringar mellan versioner, se vår CHANGELOG.md-fil på GitHub.
 
+## v26.4.0
+
+### ✨ Nya funktioner
+
+- ✨ Mötestimer: En ny funktion för mötestimer har lagts till. Valfri funktion, kan aktiveras i avancerade inställningar. Timern kan användas för att hjälpa mediaoperatören att hålla koll på tiden som spenderas på olika delar av mötet, eller för att visa tiden för den aktuella mötesdelen på en separat skärm som endast är synlig för talaren.
+
 ## v26.3.0
 
 ### ✨ Nya funktioner

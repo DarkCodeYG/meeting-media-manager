@@ -38,11 +38,11 @@
     "@formkit/drag-and-drop": "^0.5.3",
     "@jitsi/robotjs": "^0.6.21",
     "@numairawan/video-duration": "^1.0.0",
-    "@opentelemetry/api-logs": "^0.213.0",
+    "@opentelemetry/api-logs": "^0.214.0",
     "@quasar/extras": "^1.17.0",
     "@sentry/core": "^10.46.0",
     "@sentry/electron": "^7.10.0",
-    "@sentry/vue": "^10.44.0",
+    "@sentry/vue": "^10.46.0",
     "@vueuse/core": "^14.2.1",
     "@vueuse/router": "^14.2.1",
     "better-sqlite3": "^12.8.0",
@@ -68,7 +68,7 @@
     "music-metadata": "^11.12.3",
     "obs-websocket-js": "^5.0.8",
     "p-queue": "^9.1.0",
-    "pdfjs-dist": "^5.5.207",
+    "pdfjs-dist": "^5.6.205",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "pretty-bytes": "^7.1.0",
@@ -107,7 +107,7 @@
     "@types/lodash-es": "^4.17.12",
     "@types/mousetrap": "^1.6.15",
     "@types/ms": "^2",
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.5.2",
     "@types/pretty-bytes": "^5.2.0",
     "@types/yauzl": "^2.10.3",
     "@typescript-eslint/utils": "^8.57.2",
@@ -122,6 +122,7 @@
     "eslint": "^10.1.0",
     "eslint-plugin-perfectionist": "^5.7.0",
     "eslint-plugin-vue": "^10.8.0",
+    "fantasticon": "^4.1.0",
     "globals": "^17.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
@@ -136,8 +137,7 @@
     "vitepress": "^2.0.0-alpha.17",
     "vitest": "^4.1.2",
     "vue-eslint-parser": "^10.4.0",
-    "vue-tsc": "^3.2.6",
-    "webpack-iconfont-plugin-nodejs": "^1.0.36"
+    "vue-tsc": "^3.2.6"
   },
   "resolutions": {
     "vite": "8.0.3",
@@ -151,8 +151,8 @@
     "*.{js,ts,cjs,mjs,mts,vue}": "eslint --fix"
   },
   "engines": {
-    "node": "^22.19.0",
-    "yarn": "^4.7.0"
+    "node": "^24.14.0",
+    "yarn": "^4.13.0"
   },
   "os": [
     "darwin",
@@ -161,6 +161,6 @@
   ],
   "private": true,
   "type": "module",
-  "packageManager": "yarn@4.12.0",
+  "packageManager": "yarn@4.13.0",
   "productName": "Meeting Media Manager"
 }

@@ -23,6 +23,18 @@ export const authorizedClose = {
   authorized: false,
 };
 
+const syncTimerWindowPosition = () => {
+  void import('src-electron/main/window/window-timer')
+    .then(({ moveTimerWindowThrottled, timerWindowInfo }) => {
+      if (timerWindowInfo.timerWindow?.isVisible()) {
+        moveTimerWindowThrottled();
+      }
+    })
+    .catch(() => {
+      // Ignore errors: timer window sync is best-effort and should never block main window moves.
+    });
+};
+
 /**
  * Creates the main window
  */

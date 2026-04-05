@@ -4,6 +4,12 @@
 
 Täydellinen luettelo versioiden välisistä muutoksista, katso meidän CHANGELOG.md tiedosto GitHubissa.
 
+## v26.4.0
+
+### ✨ Mitä uutta
+
+- ✨ Kokousajastin: Uusi kokousajastinominaisuus on lisätty. Valinnainen toiminto, voidaan ottaa käyttöön lisäasetuksissa. Ajastinta voidaan käyttää auttamaan mediaoperaattoria seuraamaan eri kokousosioihin käytettyä aikaa tai näyttämään kulunut aika nykyisessä kokousosiossa erillisellä näytöllä, joka on näkyvissä vain puhujalle.
+
 ## v26,3.0
 
 ### ✨ Mitä uutta
