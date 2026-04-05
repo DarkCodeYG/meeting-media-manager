@@ -1010,11 +1010,18 @@ const checkMemorialDate = async () => {
         });
       }
     } else {
-      createTemporaryNotification({
-        group: 'memorial-fetch',
-        message: t('memorialFetchError'),
-        type: 'negative',
-      });
+      // Suppress error if memorial date is next year: this year's publication
+      // is no longer available after the memorial passes, which is expected.
+      const memorialYear = parseInt(
+        (currentSettings.value?.memorialDate ?? '').split('/')[0],
+      );
+      if (memorialYear <= new Date().getFullYear()) {
+        createTemporaryNotification({
+          group: 'memorial-fetch',
+          message: t('memorialFetchError'),
+          type: 'negative',
+        });
+      }
     }
 
     // Add the usual songs for memorial
