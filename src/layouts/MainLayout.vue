@@ -77,6 +77,7 @@ import { watchExternalFolder } from 'src/helpers/fs';
 import {
   downloadBackgroundMusic,
   downloadSongbookVideos,
+  fetchMedia,
   getJwMepsInfo,
   setUrlVariables,
   watchedItemMapper,
@@ -295,6 +296,7 @@ watch(currentCongregation, async (newCongregation, oldCongregation) => {
     const scheduleChanged = !!(await syncMeetingSchedule());
 
     updateLookupPeriod({ reset: scheduleChanged });
+    await fetchMedia();
     downloadBackgroundMusic();
     delayedCacheClear();
 

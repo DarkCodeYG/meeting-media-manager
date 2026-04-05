@@ -208,6 +208,7 @@ export interface ElectronApi {
    *   // => 'file:///home/user/document.pdf'
    */
   pathToFileURL: (path: string) => string;
+  pauseAllDownloads: () => void;
   PLATFORM: string;
   quitAndInstall: () => void;
   readdir: (
@@ -298,6 +299,7 @@ export type ElectronIpcSendKey =
   | 'navigateWebsiteWindow'
   | 'openDiscussion'
   | 'openExternal'
+  | 'pauseAllDownloads'
   | 'quitAndInstall'
   | 'resumeAllDownloads'
   | 'setElectronUrlVariables'
