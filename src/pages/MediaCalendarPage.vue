@@ -802,7 +802,8 @@ watch(
       const daysUntilError = getDateDiff(errorVal, new Date(), 'days');
       if (
         seenErrors.has(currentCongregation.value + errorVal) ||
-        daysUntilError > 7
+        daysUntilError > 7 ||
+        daysUntilError < -1
       )
         return;
       createTemporaryNotification({
