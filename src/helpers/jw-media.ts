@@ -49,7 +49,12 @@ import {
 } from 'src/helpers/mediaPlayback';
 import { updateLastUsedDate } from 'src/helpers/usage';
 import { log } from 'src/shared/vanilla';
-import { fetchMediaItems, fetchPubMediaLinks, fetchRaw } from 'src/utils/api';
+import {
+  clearFetchCache,
+  fetchMediaItems,
+  fetchPubMediaLinks,
+  fetchRaw,
+} from 'src/utils/api';
 import { convertImageIfNeeded } from 'src/utils/converters';
 import {
   dateFromString,
@@ -3308,6 +3313,7 @@ export const setUrlVariables = async (baseUrl: string | undefined) => {
   try {
     resetUrlVariables();
     jwStore.urlVariables.base = baseUrl;
+    clearFetchCache();
     const homePageUrl = 'https://www.' + baseUrl + '/en';
 
     requestControllers
@@ -3322,7 +3328,7 @@ export const setUrlVariables = async (baseUrl: string | undefined) => {
       {
         signal: controller.signal,
       },
-      true,
+      false,
     )
       .then((response) => {
         if (!response.ok) return null;
