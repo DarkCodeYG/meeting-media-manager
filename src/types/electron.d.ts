@@ -8,7 +8,7 @@ import type {
   SettingsValues,
   VideoDuration,
 } from 'src/types/electron';
-import type Path from 'upath';
+import type { basename, dirname, extname, join, parse } from 'upath';
 
 export interface ConversionOptions {
   /**
@@ -42,6 +42,7 @@ export type Display = Electron.Display & {
 
 export interface ElectronApi {
   askForMediaAccess: () => void;
+  basename: typeof basename;
   cancelAllDownloads: () => void;
   checkForUpdates: () => void;
   closeWebsiteWindow: () => void;
@@ -62,6 +63,7 @@ export interface ElectronApi {
     ffmpegPath: string,
     outputDir?: string,
   ) => Promise<string>;
+  dirname: typeof dirname;
   downloadFile: (
     url: string,
     saveDir: string,
@@ -73,6 +75,7 @@ export interface ElectronApi {
     query: string,
     params?: (null | number | string)[],
   ) => T[];
+  extname: typeof extname;
   /**
    * Converts a file URL to a file path.
    *
@@ -111,6 +114,7 @@ export interface ElectronApi {
   isDownloadComplete: (downloadId: string) => Promise<boolean | null>;
   isDownloadErrorExpected: () => Promise<boolean>;
   isUsablePath: (path: string) => Promise<boolean>;
+  join: typeof join;
   moveMediaWindow: (
     targetScreenNumber?: number,
     windowedMode?: boolean,
@@ -192,11 +196,11 @@ export interface ElectronApi {
   openFolder: (path: string) => Promise<string>;
   openFolderDialog: () => Promise<Electron.OpenDialogReturnValue | undefined>;
   openWebsiteWindow: (websiteParams?: JwSiteParams) => void;
+  parse: typeof parse;
   parseMediaFile: (
     filePath: string,
     options?: IOptions,
   ) => Promise<IAudioMetadata>;
-  path: typeof Path;
   /**
    * Converts a file path to a file url.
    *
