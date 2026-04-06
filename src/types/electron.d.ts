@@ -8,7 +8,16 @@ import type {
   SettingsValues,
   VideoDuration,
 } from 'src/types/electron';
-import type { basename, dirname, extname, join, parse } from 'upath';
+import type {
+  basename,
+  changeExt,
+  dirname,
+  extname,
+  join,
+  normalize,
+  parse,
+  resolve,
+} from 'upath';
 
 export interface ConversionOptions {
   /**
@@ -44,6 +53,7 @@ export interface ElectronApi {
   askForMediaAccess: () => void;
   basename: typeof basename;
   cancelAllDownloads: () => void;
+  changeExt: typeof changeExt;
   checkForUpdates: () => void;
   closeWebsiteWindow: () => void;
   convertHeic: (image: ConversionOptions) => Promise<ArrayBuffer>;
@@ -124,6 +134,7 @@ export interface ElectronApi {
     windowedMode?: boolean,
   ) => void;
   navigateWebsiteWindow: (action: NavigateWebsiteAction) => void;
+  normalize: typeof normalize;
   onDownloadCancelled: (callback: (args: { id: string }) => void) => void;
   onDownloadCompleted: (
     callback: (args: { filePath: string; id: string }) => void,
@@ -222,6 +233,7 @@ export interface ElectronApi {
   ) => Promise<FileItem[]>;
   registerShortcut: (name: keyof SettingsValues, shortcut: string) => void;
   removeListeners: (channel: ElectronIpcListenKey) => void;
+  resolve: typeof resolve;
   resumeAllDownloads: () => void;
   robot: typeof robot;
   setAutoStartAtLogin: (value: boolean) => void;
