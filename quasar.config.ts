@@ -315,6 +315,8 @@ export default defineConfig((ctx) => {
         // Remove unneeded dependencies from production build
         Object.keys(pkg.dependencies).forEach((dep) => {
           if (!electronDeps.has(dep)) {
+            // eslint-disable-next-line no-console
+            console.log(`Removing dependency: ${dep}`);
             // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete pkg.dependencies[dep];
           }
