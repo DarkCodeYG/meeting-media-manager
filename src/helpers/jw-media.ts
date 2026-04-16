@@ -462,9 +462,7 @@ export const downloadFileIfNeeded = async ({
       } as never;
     }
 
-    const DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
     const result = await new Promise<DownloadedFile>((resolve) => {
-      const startTime = Date.now();
       const interval = setInterval(() => {
         if (!downloadId) {
           clearInterval(interval);
@@ -493,30 +491,9 @@ export const downloadFileIfNeeded = async ({
               path: destinationPath,
             });
           }, 200);
-          return;
         }
         if (currentStateStore.downloadProgress[downloadId]?.error) {
           clearInterval(interval);
-          resolve({
-            error: true,
-            path: destinationPath,
-          });
-          return;
-        }
-        if (Date.now() - startTime > DOWNLOAD_TIMEOUT_MS) {
-          clearInterval(interval);
-          log(
-            `Download timed out after 5 minutes: ${url}`,
-            'mediaFetching',
-            'warn',
-          );
-          currentStateStore.downloadProgress[downloadId] = {
-            ...(currentStateStore.downloadProgress[downloadId] as Record<
-              string,
-              unknown
-            >),
-            error: true,
-          } as never;
           resolve({
             error: true,
             path: destinationPath,

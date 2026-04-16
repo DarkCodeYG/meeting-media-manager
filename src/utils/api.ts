@@ -51,14 +51,7 @@ export const fetchRaw = async (
   if (!process.env.VITEST)
     log('fetchRaw', 'api', 'debug', { cache, init, url });
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60_000);
-  let response: Response;
-  try {
-    response = await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  const response = await fetch(url, init);
 
   if (isCacheable && response.ok) {
     fetchCache.set(cacheKey, response.clone());
