@@ -867,6 +867,8 @@ const checkMemorialDate = async () => {
       return;
     }
 
+    selectedDateObject.value.mediaSections ??= [];
+
     const introSection = getOrCreateMediaSection(
       selectedDateObject.value.mediaSections,
       'welcome-video',
@@ -1430,7 +1432,7 @@ onMounted(() => {
   goToNextDayWithMedia();
   checkMemorialDate();
 
-  // If no date with media is found, go to todays date
+  // If no date with media is found, go to today's date
   if (!selectedDate.value) {
     selectedDate.value = formatDate(new Date(), 'YYYY/MM/DD');
   }
