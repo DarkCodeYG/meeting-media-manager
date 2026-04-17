@@ -1,3 +1,5 @@
+import type { ElectronApi } from 'src/types/electron';
+
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { log } from 'src/shared/vanilla';
 class ElectronApiManager {
@@ -11,8 +13,7 @@ class ElectronApiManager {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise((resolve, reject) => {
-      // @ts-expect-error Assuming globalThis.electronApi is defined in the Electron context
-      if (globalThis.electronApi?.join) {
+      if ((globalThis.electronApi as ElectronApi | undefined)?.join) {
         log(
           `[${this.pageName}] Electron API was available immediately.`,
           'electron',
@@ -24,8 +25,7 @@ class ElectronApiManager {
 
       let attempts = 2;
       const check = () => {
-        // @ts-expect-error Assuming globalThis.electronApi is defined in the Electron context
-        if (globalThis.electronApi?.join) {
+        if ((globalThis.electronApi as ElectronApi | undefined)?.join) {
           log(
             `[${this.pageName}] Electron API became available after ${attempts} attempts.`,
             'electron',

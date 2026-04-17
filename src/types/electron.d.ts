@@ -356,3 +356,8 @@ export interface UnzipOptions {
 export interface UnzipResult {
   path: string;
 }
+
+declare global {
+   
+  var electronApi: ElectronApi;
+}
