@@ -102,6 +102,32 @@ jobs:
           - 베델 연사 방문 마련
 
           ---
+
+          ### 🍎 macOS 설치 방법 (서명되지 않은 앱)
+
+          이 빌드는 Apple 공증을 받지 않아 처음 실행 시 "개발자를 확인할 수 없음" 경고가 표시될 수 있습니다.
+
+          **방법 1 — 터미널 명령어 (권장)**
+
+          DMG 마운트 후 터미널에서 아래 명령어 실행:
+
+          \`\`\`sh
+          xattr -d com.apple.quarantine /Applications/Meeting\ Media\ Manager.app
+          \`\`\`
+
+          또는 DMG 파일 자체의 격리 속성 제거 후 설치:
+
+          \`\`\`sh
+          xattr -d com.apple.quarantine ~/Downloads/meeting-media-manager-${VERSION}-universal.dmg
+          \`\`\`
+
+          **방법 2 — 시스템 설정에서 허용**
+
+          1. DMG를 열고 앱을 Applications 폴더로 복사
+          2. 앱 실행 시 경고 창이 뜨면 **취소** 클릭
+          3. **시스템 설정 → 개인 정보 보호 및 보안 → 보안** 항목 하단에서 **"확인 없이 열기"** 클릭
+
+          ---
           Built from commit ${SHA}
           RELEASE_BODY
           )
