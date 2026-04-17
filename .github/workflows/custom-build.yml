@@ -31,9 +31,17 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Remove stale preload (macOS/Linux)
+        if: runner.os != 'Windows'
+        run: rm -f src-electron/electron-preload.cjs
+
+      - name: Remove stale preload (Windows)
+        if: runner.os == 'Windows'
+        run: Remove-Item -Path src-electron/electron-preload.cjs -ErrorAction SilentlyContinue
+        shell: pwsh
+
       - name: Build Electron App
         run: |
-          rm -f src-electron/electron-preload.cjs
           yarn generate:icons
           yarn generate:logos
           yarn build
