@@ -837,9 +837,6 @@ const watchers = new Set<FSWatcher>();
 const datePattern = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
 const WATCH_POLL_INTERVAL_MS = 1000;
 
-const isNetworkFolderPath = (folderPath: string) =>
-  toUnix(folderPath).startsWith('//');
-
 const shouldIgnoreWatchFolderError = (
   folderPath: string,
   error: Error & { code?: string; syscall?: string },
@@ -853,7 +850,7 @@ const shouldIgnoreWatchFolderError = (
   }
 
   // Ignore known flaky watch errors on network folders (WebDAV/UNC shares).
-  if (isNetworkFolderPath(folderPath)) {
+  if (isPossiblyNetworkFolderPath(folderPath)) {
     if (error.code === 'UNKNOWN' && error.syscall === 'watch') return true;
     if (error.code === 'EISDIR' && error.syscall === 'watch') return true;
   }
@@ -875,7 +872,7 @@ export async function unwatchFolders() {
 }
 
 export async function watchFolder(folderPath: string) {
-  const networkFolderPath = isNetworkFolderPath(folderPath);
+  const networkFolderPath = isPossiblyNetworkFolderPath(folderPath);
 
   watchers.add(
     filesystemWatch(folderPath, {

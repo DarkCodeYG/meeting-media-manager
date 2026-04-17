@@ -365,6 +365,7 @@
   "meetingScheduleChangeWeStartTime-explain": "选择周末聚会的新时间，如果没有改变，请留空。",
   "meetingStopBufferSeconds": "聚会多少秒前要停止音乐？",
   "meetingStopBufferSeconds-explain": "调整滑块以设置在聚会开始多少秒前要停止音乐。",
+  "memorial-background": "纪念聚会期间显示的图像",
   "memorial-talk": "纪念讲演",
   "memorialDate": "纪念聚会的日期",
   "memorialDate-explain": "如果被输入，M3将自动尝试下载并准备该纪念聚会的背景图像。 图像将被显示而不是全年经文。请注意这是一个实验性功能，可能无法正常工作。",
