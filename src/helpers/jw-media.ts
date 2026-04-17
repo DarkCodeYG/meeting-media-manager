@@ -744,7 +744,7 @@ export const fetchMedia = async () => {
           });
       } catch (error) {
         errorCatcher(error);
-        day.status = 'error';
+        day.status = isInPast(day.date) ? 'complete' : 'error';
       }
     }
     await queue?.onIdle();
