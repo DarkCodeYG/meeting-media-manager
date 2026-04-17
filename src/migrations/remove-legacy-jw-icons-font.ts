@@ -3,9 +3,8 @@ import { getFontsPath } from 'src/utils/fs';
 
 import type { MigrationFunction } from './types';
 
-const { fs, path } = globalThis.electronApi;
+const { fs, join } = globalThis.electronApi;
 const { exists, remove } = fs;
-const { join } = path;
 
 /**
  * Remove legacy JW-Icons font cache files so the new jw-icons-all font is
