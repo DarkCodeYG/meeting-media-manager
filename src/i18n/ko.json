@@ -472,6 +472,8 @@
   "other": "기타",
   "other:": "기타:",
   "paragraph": "문단",
+  "path-probe-network-warning-caption": "설정된 모든 경로가 유효하고 쓰기 가능한지 확인하십시오. 네트워크 경로인 경우 관련 보조 앱이 실행 중이거나 해당 경로에 접근 가능한지 확인하십시오.",
+  "path-probe-network-warning-message": "설정된 경로 중 하나에 쓰기 오류가 발생했습니다.",
   "pause": "일시정지",
   "pause-to-adjust-time": "재생 위치를 변경하려면 동영상을 일시정지 해야 합니다.",
   "perSecond": "/s",

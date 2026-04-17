@@ -475,6 +475,8 @@
   "other": "其他",
   "other:": "其他：",
   "paragraph": "段落",
+  "path-probe-network-warning-caption": "请确保所有已配置的路径均有效且可写入。如果是网络路径，请确保相关配套应用程序正在运行，或该路径可以正常访问。",
+  "path-probe-network-warning-message": "向其中一个已配置的路径写入时发生错误。",
   "pause": "暂停",
   "pause-to-adjust-time": "要启用时间轴拖动，必须先暂停视频。",
   "perSecond": "/秒",
