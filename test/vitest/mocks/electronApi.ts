@@ -126,20 +126,23 @@ export const electronApi: ElectronApi = {
   onLog: function (callback) {
     throw new Error('Function not implemented.');
   },
+  onPathProbeNetworkWarning: function (callback) {
+    throw new Error('Function not implemented.');
+  },
   onShortcut: function (callback) {
     throw new Error('Function not implemented.');
   },
   onUpdateAvailable: function (callback) {
-    console.log('onUpdateAvailable called but not implemented');
+    throw new Error('Function not implemented.');
   },
   onUpdateDownloaded: function (callback) {
-    console.log('onUpdateDownloaded called but not implemented');
+    throw new Error('Function not implemented.');
   },
   onUpdateDownloadProgress: function (callback) {
-    console.log('onUpdateDownloadProgress called but not implemented');
+    throw new Error('Function not implemented.');
   },
   onUpdateError: function (callback) {
-    console.log('onUpdateError called but not implemented');
+    throw new Error('Function not implemented.');
   },
   onVideoCaptureCrashDetected: function () {
     throw new Error('Function not implemented.');
@@ -151,7 +154,7 @@ export const electronApi: ElectronApi = {
     throw new Error('Function not implemented.');
   },
   onWebsiteWindowClosed: function (callback) {
-    console.log('onWebsiteWindowClosed called but not implemented');
+    throw new Error('Function not implemented.');
   },
   openDiscussion: function (category, title, params) {
     throw new Error('Function not implemented.');
@@ -195,6 +198,9 @@ export const electronApi: ElectronApi = {
     throw new Error('Function not implemented.');
   },
   setHardwareAcceleration: function (disabled) {
+    throw new Error('Function not implemented.');
+  },
+  setPathProbeNotificationPaths: function (paths) {
     throw new Error('Function not implemented.');
   },
   toggleMediaWindow: function (show) {
