@@ -81,20 +81,27 @@ jobs:
           body: |
             ## 커스텀 빌드 v${{ steps.version.outputs.version }}
 
-            업스트림 v26.4.3-beta.2까지의 변경사항을 반영한 포크 빌드입니다.
+            업스트림 [v26.4.7](https://github.com/sircharlo/meeting-media-manager/releases/tag/v26.4.7)까지의 변경사항을 반영한 포크 빌드입니다.
 
-            ### 🛠️ 버그 수정 및 개선
-            - 업스트림 v26.4.3-beta.2까지의 변경사항 반영
-            - BrowserWindow 소멸 후 상태 업데이트 오류 수정
-            - 미디어 창 위치 경계값 검증 추가
-            - 타이머 창 위치 동기화 개선
-            - lodash 보안 업데이트, Vue 3.5.32, Electron 41.1.1 등 의존성 업데이트
-            - 기념식 날짜가 내년으로 전환된 후 발생하는 빨간 오류 알림 수정
+            ### 🛠️ 업스트림 버그 수정 및 개선 (v26.4.3 → v26.4.7)
+
+            - **과거 날짜 미디어 오류 알림 수정** — 지난 집회 날짜에서 발생하는 빨간 오류 알림 제거 ([#7011](https://github.com/sircharlo/meeting-media-manager/pull/7011), [#7012](https://github.com/sircharlo/meeting-media-manager/pull/7012))
+            - **추도식 미디어 처리 개선** — 추도식으로 대체된 주간/주말 집회 미디어 올바르게 처리, 추도식 날짜 보존 기간 수정 ([#7005](https://github.com/sircharlo/meeting-media-manager/pull/7005), [#7014](https://github.com/sircharlo/meeting-media-manager/pull/7014))
+            - **추도식 배경음악 배너** — 추도식 날짜 선택 시 미디어 목록에 배경음악 항목 자동 추가
+            - **다음 날 탐색 개선** — 당일 포함 여부 로직 수정 ([#7008](https://github.com/sircharlo/meeting-media-manager/pull/7008))
+            - **베이스 URL 변경 시 캐시 우회** — 언어 변경 후 이전 캐시 요청 사용 방지 ([#7016](https://github.com/sircharlo/meeting-media-manager/pull/7016))
+            - **네트워크 폴더 경고 알림** — 네트워크 드라이브 또는 공유 폴더 감지 시 사용자에게 알림 ([#7045](https://github.com/sircharlo/meeting-media-manager/pull/7045))
+            - **JW 아이콘 폰트 폴백 수정** — 아이콘 폰트 로드 경쟁 조건 및 오프라인 폴백 개선 ([#7023](https://github.com/sircharlo/meeting-media-manager/pull/7023))
+            - **CSP 보안 수정** — 잘못된 형식의 호스트명으로 인한 CSP 생성 오류 방지 ([#7072](https://github.com/sircharlo/meeting-media-manager/pull/7072))
+            - **Fonts 폴더 초기화 마이그레이션** — 업그레이드 시 캐시된 폰트 파일 정리 ([#7021](https://github.com/sircharlo/meeting-media-manager/pull/7021))
+            - **다운로드 큐 안정성 개선** — 큐 일시 중지/재개 제어, 복구 로직, 로깅 강화 ([#6995](https://github.com/sircharlo/meeting-media-manager/pull/6995), [#7017](https://github.com/sircharlo/meeting-media-manager/pull/7017), [#7019](https://github.com/sircharlo/meeting-media-manager/pull/7019))
+            - **의존성 업데이트** — Electron 41.1.1, Quasar 2.19.3, Vue 3.5.32, DOMPurify 3.4.0, upath 3.0.6 등
 
             ### 🍴 포크 전용 기능
+
             - 집회 전 시계 (Orbitron 폰트)
             - 베델 연사 방문 섹션 자동 생성
-            - 한국어/중국어 번역
+            - 한국어/중국어 간체 번역
 
             ---
             Built from commit ${{ github.sha }}
