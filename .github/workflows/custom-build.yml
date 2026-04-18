@@ -92,8 +92,8 @@ jobs:
           ### 🛠️ 업스트림 버그 수정 및 개선 (v26.4.3 → v26.4.7)
 
           - **과거 날짜 미디어 오류 알림 수정** — 지난 집회 날짜에서 발생하는 빨간 오류 알림 제거 ([#7011](https://github.com/sircharlo/meeting-media-manager/pull/7011), [#7012](https://github.com/sircharlo/meeting-media-manager/pull/7012))
-          - **추도식 미디어 처리 개선** — 추도식으로 대체된 주간/주말 집회 미디어 올바르게 처리, 추도식 날짜 보존 기간 수정 ([#7005](https://github.com/sircharlo/meeting-media-manager/pull/7005), [#7014](https://github.com/sircharlo/meeting-media-manager/pull/7014))
-          - **추도식 배경음악 배너** — 추도식 날짜 선택 시 미디어 목록에 배경음악 항목 자동 추가
+          - **기념식 미디어 처리 개선** — 기념식으로 대체된 주간/주말 집회 미디어 올바르게 처리, 기념식 날짜 보존 기간 수정 ([#7005](https://github.com/sircharlo/meeting-media-manager/pull/7005), [#7014](https://github.com/sircharlo/meeting-media-manager/pull/7014))
+          - **기념식 배경음악 배너** — 기념식 날짜 선택 시 미디어 목록에 배경음악 항목 자동 추가
           - **다음 날 탐색 개선** — 당일 포함 여부 로직 수정 ([#7008](https://github.com/sircharlo/meeting-media-manager/pull/7008))
           - **베이스 URL 변경 시 캐시 우회** — 언어 변경 후 이전 캐시 요청 사용 방지 ([#7016](https://github.com/sircharlo/meeting-media-manager/pull/7016))
           - **네트워크 폴더 경고 알림** — 네트워크 드라이브 또는 공유 폴더 감지 시 사용자에게 알림 ([#7045](https://github.com/sircharlo/meeting-media-manager/pull/7045))
