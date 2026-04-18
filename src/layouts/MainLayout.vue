@@ -1570,7 +1570,7 @@ watchImmediate(
     if (currentState.currentLangObject?.langcode) {
       postCurrentLang(String(currentState.currentLangObject.langcode));
     }
-    checkPreMeetingClock();
+    checkPreMeetingFeatures();
     if (locale.value) postTimerLocale(locale.value);
     if (!yeartextWatcherPaused.value) {
       postYeartext(yeartext.value);

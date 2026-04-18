@@ -435,6 +435,18 @@ export async function downloadFile(
 
     if (!destFilename) destFilename = basename(url);
 
+    // A new download request means we want downloads to work again.
+    // Reset cancelAll so that congregation switches (which call cancelAllDownloads)
+    // don't permanently block subsequent downloads in the same session.
+    if (cancelAll && !quitStatus.isAppQuitting) {
+      cancelAll = false;
+      log(
+        'cancelAll reset to false — new download requested after cancel',
+        'electronDownloads',
+        'log',
+      );
+    }
+
     const fileToDownload = { destFilename, saveDir, url };
     const key = url + saveDir;
 
