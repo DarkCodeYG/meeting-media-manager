@@ -38,6 +38,8 @@ import {
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { exportAllDays } from 'src/helpers/export-media';
 import {
+  getEmbeddedSubtitlesUrl,
+  getSidecarSubtitlesUrl,
   getSubtitlesUrl,
   getThumbnailUrl,
   registerMediaProviders,
@@ -258,6 +260,46 @@ export const copyToDatedAdditionalMedia = async (
   }
 };
 
+/**
+ * Extracts a video's embedded subtitle track and attaches it to an already added
+ * media item.
+ *
+ * Runs after the item is in the store so that adding media stays responsive: the
+ * first extraction has to download FFmpeg. Silent when the video turns out to
+ * have no usable subtitle track, which is the common case.
+ *
+ * @param filePath The local video file
+ * @param uniqueId The uniqueId of the media item to update
+ * @param congregation The congregation the item was added under
+ */
+const backfillEmbeddedSubtitles = async (
+  filePath: string,
+  uniqueId: string,
+  congregation: string,
+) => {
+  try {
+    const subtitlesUrl = await getEmbeddedSubtitlesUrl(filePath);
+    if (!subtitlesUrl) return;
+
+    const jwStore = useJwStore();
+    for (const day of jwStore.lookupPeriod[congregation] ?? []) {
+      for (const mediaSection of day.mediaSections ?? []) {
+        const item = mediaSection.items?.find((i) => i.uniqueId === uniqueId);
+        if (item) {
+          item.subtitlesUrl = subtitlesUrl;
+          return;
+        }
+      }
+    }
+  } catch (error) {
+    errorCatcher(error, {
+      contexts: {
+        fn: { filePath, name: 'backfillEmbeddedSubtitles', uniqueId },
+      },
+    });
+  }
+};
+
 export const addToAdditionMediaMapFromPath = async (
   additionalFilePath: string,
   section: MediaSectionIdentifier = 'imported-media',
@@ -296,6 +338,11 @@ export const addToAdditionMediaMapFromPath = async (
           pathToFileURL(additionalFilePath),
       );
     }
+    // A subtitle file the user placed next to the video is an explicit choice, so
+    // it wins over anything embedded in the container.
+    const sidecarSubtitlesUrl = video
+      ? await getSidecarSubtitlesUrl(additionalFilePath)
+      : '';
     log(
       `[addToAdditionMediaMapFromPath] Adding media to section: ${JSON.stringify({ section, uniqueId })}`,
       'mediaProcessing',
@@ -316,6 +363,11 @@ export const addToAdditionMediaMapFromPath = async (
           sortOrderOriginal: -1,
           source: 'additional',
           streamUrl: additionalInfo?.url,
+          // Manually added videos never had subtitles: getSubtitlesUrl() only
+          // resolves publication media (it needs KeySymbol + Track), so local
+          // files fell through with an empty subtitlesUrl and the player never
+          // rendered a <track> element.
+          subtitlesUrl: sidecarSubtitlesUrl,
           tag: {
             type: additionalInfo?.song ? 'song' : undefined,
             value: additionalInfo?.song ?? undefined,
@@ -333,6 +385,15 @@ export const addToAdditionMediaMapFromPath = async (
       currentStateStore.selectedDateObject,
       isCoWeek(currentStateStore.selectedDateObject?.date),
     );
+    if (video && !sidecarSubtitlesUrl) {
+      // Not awaited: extracting an embedded track needs FFmpeg, which is
+      // downloaded on first use, and adding media must not stall on that.
+      void backfillEmbeddedSubtitles(
+        additionalFilePath,
+        uniqueId,
+        currentStateStore.currentCongregation,
+      );
+    }
     return uniqueId;
   } catch (error) {
     errorCatcher(error, {

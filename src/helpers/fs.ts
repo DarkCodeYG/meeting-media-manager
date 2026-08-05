@@ -14,7 +14,11 @@ import { Platform } from 'quasar';
 import { FULL_HD } from 'src/constants/media';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { fetchJson } from 'src/utils/api';
-import { getCachedUserDataPath, getPublicationDirectory } from 'src/utils/fs';
+import {
+  getCachedUserDataPath,
+  getPublicationDirectory,
+  getTempPath,
+} from 'src/utils/fs';
 import { isAudio, isImage, isVideo } from 'src/utils/media';
 import { useCurrentStateStore } from 'stores/current-state';
 import { useJwStore } from 'stores/jw';
@@ -53,9 +57,11 @@ const getJwMediaInfo = (publication: PublicationFetcher) => {
 
 const {
   basename,
+  changeExt,
   dirname,
   downloadFile,
   extname,
+  extractSubtitles,
   fileUrlToPath,
   fs,
   join,
@@ -67,7 +73,7 @@ const {
   unzip,
   watchFolder,
 } = globalThis.electronApi;
-const { exists, pathExists, stat, writeFile } = fs;
+const { exists, pathExists, readFile, stat, writeFile } = fs;
 
 const getThumbnailFromMetadata = async (mediaPath: string) => {
   try {
@@ -312,6 +318,113 @@ export const getSubtitlesUrl = async (
     return '';
   }
 };
+
+/** Subtitle sidecar extensions, in the order they are preferred. */
+const SUBTITLE_SIDECAR_EXTENSIONS = ['.vtt', '.srt'] as const;
+
+/**
+ * Short deterministic digest of a path, used to keep generated cache file names
+ * unique when two source files share a base name.
+ */
+const hashPath = (value: string) => {
+  let hash = 0x811c9dc5; // FNV-1a offset basis
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+};
+
+/**
+ * Converts SubRip (.srt) text to WebVTT.
+ *
+ * `<track>` only understands WebVTT. The two formats differ in the header and in
+ * the decimal separator of the timestamps, so a textual conversion is enough.
+ */
+export const srtToVtt = (srt: string) =>
+  `WEBVTT\n\n${srt
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(
+      /(\d{2}:\d{2}:\d{2}),(\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}),(\d{3})/g,
+      '$1.$2 --> $3.$4',
+    )
+    .trim()}\n`;
+
+/**
+ * Looks for a subtitle file sitting next to a video (`video.vtt`, `video.srt`).
+ *
+ * @param filePath The video file to look beside
+ * @returns A file URL for a WebVTT file, or an empty string when none is found.
+ *   SubRip sidecars are converted to WebVTT in the cache directory.
+ */
+export const getSidecarSubtitlesUrl = async (filePath: string) => {
+  if (!isLocalSubtitleCandidate(filePath)) return '';
+  for (const extension of SUBTITLE_SIDECAR_EXTENSIONS) {
+    // changeExt rather than split('.'): file names legitimately contain dots.
+    const sidecarPath = changeExt(filePath, extension);
+    if (!(await exists(sidecarPath))) continue;
+
+    if (extension === '.vtt') return pathToFileURL(sidecarPath);
+
+    // Converted output goes to the cache, not next to the source: the media
+    // folder may be read-only or a network share, and generated files should not
+    // accumulate in the user's own directories.
+    const convertedPath = join(
+      await getTempPath(),
+      `${basename(sidecarPath, extension)}-${hashPath(sidecarPath)}.vtt`,
+    );
+    if (!(await exists(convertedPath))) {
+      const srt = await readFile(sidecarPath, 'utf8');
+      await writeFile(convertedPath, srtToVtt(srt.toString()));
+    }
+    return pathToFileURL(convertedPath);
+  }
+  return '';
+};
+
+/**
+ * Pulls a video's own embedded subtitle track out into a WebVTT file.
+ *
+ * Kept separate from the sidecar lookup because this one is slow: it needs
+ * FFmpeg, which the app downloads on demand, so the very first call may block on
+ * a several-megabyte download. Callers should not make the user wait for it.
+ *
+ * @param filePath Path to the local video file
+ * @returns A file URL for a WebVTT file, or an empty string when the video has
+ *   no usable text subtitle track
+ */
+export const getEmbeddedSubtitlesUrl = async (filePath: string) => {
+  try {
+    if (!isLocalSubtitleCandidate(filePath)) return '';
+
+    const ffmpegPath = await setupFFmpeg();
+    if (!ffmpegPath) return '';
+
+    const subtitlesPath = await extractSubtitles(
+      filePath,
+      ffmpegPath,
+      await getTempPath(),
+    );
+    return subtitlesPath ? pathToFileURL(subtitlesPath) : '';
+  } catch (error) {
+    errorCatcher(error, {
+      contexts: { fn: { filePath, name: 'getEmbeddedSubtitlesUrl' } },
+    });
+    return '';
+  }
+};
+
+/**
+ * Whether it is worth looking for subtitles for a locally added file at all.
+ *
+ * `getSubtitlesUrl` only covers publication media: it needs a KeySymbol and
+ * Track to look the subtitles up in the JW media API, which local files do not
+ * have.
+ */
+export const isLocalSubtitleCandidate = (filePath: string) =>
+  !!useCurrentStateStore().currentSettings?.enableSubtitles &&
+  isVideo(filePath);
 
 export const watchExternalFolder = async (folder?: string) => {
   try {

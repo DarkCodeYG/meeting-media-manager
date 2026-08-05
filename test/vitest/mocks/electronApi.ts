@@ -64,6 +64,9 @@ export const electronApi: ElectronApi = {
     throw new Error('Function not implemented.');
   },
   extname,
+  extractSubtitles: function (videoPath, ffmpegPath, outputDir) {
+    throw new Error('Function not implemented.');
+  },
   fileUrlToPath,
   focusMediaWindow: function () {
     throw new Error('Function not implemented.');

@@ -242,6 +242,22 @@ $q.iconMapFn = (iconName) => {
   };
 };
 
+// Id of the in-flight requestAnimationFrame that reports playback position.
+// Deliberately held here rather than inside playMedia(): the loop re-schedules
+// itself, so an id local to each call leaves no way to stop the previous loop
+// and every playback would stack another one for the rest of the session.
+let timeUpdateRafId = 0;
+
+/**
+ * Cancels the playback-position reporting loop, if one is running.
+ */
+const stopTimeUpdates = () => {
+  if (timeUpdateRafId) {
+    cancelAnimationFrame(timeUpdateRafId);
+    timeUpdateRafId = 0;
+  }
+};
+
 /**
  * Robustly cleans up a media element to prevent renderer crashes.
  * @param element The HTMLAudioElement or HTMLVideoElement to clean up.
@@ -676,11 +692,16 @@ const playMedia = () => {
       return;
     }
 
+    // A previous playback may still have a loop scheduled; replace it rather
+    // than letting the two run side by side.
+    stopTimeUpdates();
+
     let lastUpdate = 0;
     const updateInterval = fadeOutDurationInMilliseconds;
-    let rafId = 0;
 
     const updateTime = () => {
+      timeUpdateRafId = 0;
+
       // Don't continue if we're in the process of ending
       if (isEnding.value) {
         return;
@@ -705,17 +726,26 @@ const playMedia = () => {
       ) {
         isEnding.value = true;
         endOrLoop();
-        cancelAnimationFrame(rafId);
         return;
       }
 
-      rafId = requestAnimationFrame(updateTime);
+      // Only keep the per-frame loop alive while playback is actually
+      // advancing. When it is not, ontimeupdate restarts the loop, so a paused
+      // or finished video costs nothing instead of spinning until teardown.
+      if (
+        currentMediaElement.value?.paused ||
+        currentMediaElement.value?.ended
+      ) {
+        return;
+      }
+
+      timeUpdateRafId = requestAnimationFrame(updateTime);
     };
 
     currentMediaElement.value.ontimeupdate = () => {
       try {
-        if (!rafId) {
-          rafId = requestAnimationFrame(updateTime);
+        if (!timeUpdateRafId) {
+          timeUpdateRafId = requestAnimationFrame(updateTime);
         }
       } catch (e) {
         errorCatcher(e);
@@ -1325,6 +1355,7 @@ onBeforeUnmount(() => {
     '[MediaPlayerPage] onBeforeUnmount - cleaning up all media',
     'mediaPlayer',
   );
+  stopTimeUpdates();
   cleanupMediaElement(mediaElement1.value);
   cleanupMediaElement(mediaElement2.value);
   if (clockInterval) {

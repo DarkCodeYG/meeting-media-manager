@@ -34,7 +34,10 @@ import {
   pauseAllDownloads,
   resumeAllDownloads,
 } from 'src-electron/main/downloads';
-import { createVideoFromNonVideo } from 'src-electron/main/ffmpeg';
+import {
+  createVideoFromNonVideo,
+  extractSubtitles,
+} from 'src-electron/main/ffmpeg';
 import {
   getAppDataPath,
   getZipEntries,
@@ -362,6 +365,12 @@ handleIpcInvoke(
   'createVideoFromNonVideo',
   async (_e, path: string, ffmpegPath: string, outputDir?: string) =>
     createVideoFromNonVideo(path, ffmpegPath, outputDir),
+);
+
+handleIpcInvoke(
+  'extractSubtitles',
+  async (_e, path: string, ffmpegPath: string, outputDir?: string) =>
+    extractSubtitles(path, ffmpegPath, outputDir),
 );
 
 handleIpcInvoke(

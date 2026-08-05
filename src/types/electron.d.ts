@@ -87,6 +87,23 @@ export interface ElectronApi {
   ) => T[];
   extname: typeof extname;
   /**
+   * Extracts the first embedded subtitle track of a video into a WebVTT file.
+   *
+   * Chromium does not expose container-embedded subtitle tracks, so soft subs
+   * have to be pulled out into a file before they can be attached to the player.
+   *
+   * @param videoPath - The video to read the subtitle track from.
+   * @param ffmpegPath - The path to the FFmpeg executable.
+   * @param outputDir - Where to write the .vtt; defaults to next to the video.
+   * @returns The path to the .vtt file, or an empty string when the video has no
+   *   usable text subtitle track.
+   */
+  extractSubtitles: (
+    videoPath: string,
+    ffmpegPath: string,
+    outputDir?: string,
+  ) => Promise<string>;
+  /**
    * Converts a file URL to a file path.
    *
    * @param fileurl File URL
@@ -258,6 +275,7 @@ export interface ElectronApi {
 export type ElectronIpcInvokeKey =
   | 'createVideoFromNonVideo'
   | 'downloadFile'
+  | 'extractSubtitles'
   | 'getAllScreens'
   | 'getAppDataPath'
   | 'getBetaUpdatesPath'
@@ -358,6 +376,5 @@ export interface UnzipResult {
 }
 
 declare global {
-   
   var electronApi: ElectronApi;
 }

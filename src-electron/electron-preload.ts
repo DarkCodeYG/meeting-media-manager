@@ -73,6 +73,7 @@ const electronApi: ElectronApi = {
   downloadFile: (u, sD, dF, lP) => invoke('downloadFile', u, sD, dF, lP),
   executeQuery,
   extname,
+  extractSubtitles: (f, fP, oD) => invoke('extractSubtitles', f, fP, oD),
   fileUrlToPath,
   focusMediaWindow: () => send('focusMediaWindow'),
   fs,
