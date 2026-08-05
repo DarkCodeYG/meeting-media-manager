@@ -103,6 +103,14 @@ describe('isSafeZipEntryPath', () => {
     }
   });
 
+  it('rejects Windows-style backslash traversal', () => {
+    // upath normalizes '\' to '/' before resolving, so these escape just like
+    // their forward-slash equivalents and must be rejected too.
+    for (const entry of ['..\\evil.txt', 'a\\..\\..\\evil.txt']) {
+      expect(isSafeZipEntryPath(OUTPUT, join(OUTPUT, entry))).toBe(false);
+    }
+  });
+
   it('rejects a sibling directory sharing the output prefix', () => {
     // A plain startsWith(resolvedOutput) check without the trailing separator
     // would wrongly accept this.

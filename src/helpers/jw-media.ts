@@ -2166,7 +2166,10 @@ export const getWeMedia = async (lookupDate: Date) => {
            AND (KeySymbol != ? OR KeySymbol IS NULL)
          GROUP BY DocumentMultimedia.MultimediaId
          ORDER BY DocumentParagraph.BeginPosition`, // pictures
-      [docId, currentStateStore.currentSongbook?.pub ?? null],
+      // Empty string rather than null: `KeySymbol != NULL` evaluates to unknown
+      // in SQL, which would silently drop every row that has a KeySymbol when no
+      // songbook is configured. An empty string never matches a real KeySymbol.
+      [docId, currentStateStore.currentSongbook?.pub ?? ''],
     );
     for (let i = 0; i < mediaWithoutVideos.length; i++) {
       const item = mediaWithoutVideos[i];
