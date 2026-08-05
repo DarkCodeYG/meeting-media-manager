@@ -51,9 +51,14 @@ export function createMainWindow() {
     // Create the browser window
     mainWindowInfo.mainWindow = createWindow('main');
 
-    mainWindowInfo.mainWindow.on('move', moveMediaWindowThrottled);
+    const handleMainWindowMove = () => {
+      moveMediaWindowThrottled();
+      syncTimerWindowPosition();
+    };
+
+    mainWindowInfo.mainWindow.on('move', handleMainWindowMove);
     if (PLATFORM !== 'darwin')
-      mainWindowInfo.mainWindow.on('moved', moveMediaWindowThrottled); // On macOS, the 'moved' event is just an alias for 'move'
+      mainWindowInfo.mainWindow.on('moved', handleMainWindowMove); // On macOS, the 'moved' event is just an alias for 'move'
 
     mainWindowInfo.mainWindow.on('close', (e) => {
       if (
