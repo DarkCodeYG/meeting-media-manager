@@ -83,7 +83,7 @@ i18n JSON은 Crowdin 관리 방침(`37d25264a`)에 따라 **`ko.json` 외에는 
 
 ### 🟡 P2 — 포크 유지보수 부담을 줄여주는 변경
 
-- **`better-sqlite3` 제거 → Node 내장 SQLite 사용** (v26.7.0, `36a069bfb` 계열).
+- 🔴 **`better-sqlite3` 제거 → Node 내장 SQLite 사용** (v26.7.0, `36a069bfb` 계열). **2026-08-05 실제로 릴리즈를 막았습니다** — GitHub이 `windows-latest` 를 Server 2025로 교체한 뒤 node-gyp가 런너의 Visual Studio를 못 찾아 CI 빌드가 실패했습니다. node-gyp 버전을 올려 우회했지만, `better-sqlite3` 가 남아 있는 한 이미지가 바뀔 때마다 재발할 수 있습니다. `@jitsi/robotjs` 는 이미 N-API prebuild를 제공하므로 `better-sqlite3` 만 빠지면 `npmRebuild: false` 로 node-gyp를 완전히 우회할 수 있습니다. 상세: [local-build-and-test-status.md](./local-build-and-test-status.md) 2.5절.
   → 네이티브 모듈이 하나 줄어들어 Windows/macOS 로컬 빌드 환경 구성이 크게 쉬워집니다. 현재는 Python + Visual Studio C++ 빌드 도구를 설치해 로컬 빌드가 정상 동작하지만([todo/local-build-and-test-status.md](./local-build-and-test-status.md) 참조), 새 개발 환경마다 그 설치가 필요합니다.
 - **`@quasar/app-vite` 3.0.0 업그레이드** (v26.7.3) — 포크는 2.x. 미룰수록 마이그레이션 비용 증가.
 - **`sanitize-filename` 내부 헬퍼로 교체** (`934be6216`) — 포크는 아직 외부 의존성 사용 중.

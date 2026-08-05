@@ -55,6 +55,63 @@ Windows 타깃은 [quasar.config.ts:171](../quasar.config.ts#L171) 에서 `nsis`
 - `DEP0190 DeprecationWarning: Passing args to a child process with shell option true` — `@electron/rebuild` 내부.
 - 자동 업데이트 코드 서명 오류 — 로컬 빌드에서는 정상 (CLAUDE.md 명시).
 
+## 2.5 ⚠️ CI(Windows)에서만 재현되는 node-gyp 실패
+
+2026-08-05 릴리즈 시 발생. **로컬에서는 재현되지 않으므로 로컬 빌드 성공을 근거로 판단하면 안 됩니다.**
+
+```
+Error: Could not find any Visual Studio installation to use
+  at VisualStudioFinder.fail (.../node-gyp/lib/find-visualstudio.js:118)
+node-gyp failed to rebuild '.../UnPackaged/node_modules/@jitsi/robotjs'
+```
+
+### 원인
+
+GitHub이 `windows-latest` 를 Windows Server 2025(`os=10.0.26100`)로 교체했고, 구버전 node-gyp가 그 이미지의 Visual Studio를 탐지하지 못합니다. 마지막 성공은 2026-04-18로 이미지 교체 이전입니다.
+
+로컬에서는 VS 2022가 표준 위치에 있어 node-gyp 11도 찾아내므로 **항상 성공합니다.** 이 차이 때문에 로컬 검증으로는 판정할 수 없습니다.
+
+### 함정 — 올려야 할 사본이 두 개입니다
+
+최상위 devDependency만 올리면 해결되지 않습니다. electron-builder는 자기 트리의 중첩 사본을 씁니다:
+
+```
+node_modules/@electron/rebuild                          ← devDependency (빌드가 안 씀)
+node_modules/app-builder-lib/node_modules/@electron/rebuild  ← 빌드가 실제로 쓰는 것
+```
+
+실패 스택의 경로를 보고 어느 사본인지 판별하세요. 해결은 `resolutions` 로 트리 전체를 고정하는 것입니다:
+
+```json
+"resolutions": {
+  "@electron/rebuild": "4.2.0",
+  "vite": "8.0.8"
+}
+```
+
+적용 후 중첩 사본이 사라지고 최상위로 통합되는지 확인하세요:
+
+```powershell
+Test-Path node_modules/app-builder-lib/node_modules/@electron/rebuild   # False 여야 함
+(Get-Content node_modules/@electron/rebuild/package.json -Raw | ConvertFrom-Json).version
+```
+
+### 재발 가능성과 근본 해결
+
+포크가 `better-sqlite3`(N-API 아님)를 쓰는 한 Electron ABI용 node-gyp 리빌드가 필요하고, **런너 이미지가 바뀔 때마다 같은 실패가 재발할 수 있습니다.**
+
+업스트림은 **v26.7.0에서 `better-sqlite3` 를 Node 내장 SQLite로 교체**해 이 의존을 없앴고(업스트림 `package.json` 에서 확인), robotjs prebuild 활용도 실험 중입니다(`upstream/codex/test-robotjs-prebuilds`). `@jitsi/robotjs` 는 이미 N-API prebuild(`prebuilds/win32-x64`)를 제공하므로, `better-sqlite3` 가 빠지면 `npmRebuild: false` 로 node-gyp를 완전히 우회할 수 있습니다.
+
+→ [upstream-sync-gap.md](./upstream-sync-gap.md) 의 P2 항목에 이 근거를 추가했습니다.
+
+### 임시 방편 (위 수정으로도 안 될 경우)
+
+`custom-build.yml` 의 `os: [windows-latest, macos-latest]` 에서 `windows-latest` → `windows-2022` 로 고정. 2026-04-18에 성공한 이미지이지만 지원 종료 위험이 있습니다.
+
+### 함께 고친 것 — `fail-fast: false`
+
+matrix에 이 설정이 없어 **Windows 실패가 정상 진행 중이던 macOS 빌드까지 취소**했습니다. 추가 후 macOS는 독립적으로 성공합니다.
+
 ## 3. 단위 테스트 (`yarn test:unit --run`)
 
 기준선: **233 통과 / 2 실패** (28 파일 중 2 실패). 보안 패치 적용 후에도 동일 — 회귀 없음.
