@@ -27,6 +27,12 @@ Ported from upstream, adapted where this fork's code differs.
 - 🔧 **Translations**: Removed unused keys (`reset-playback-speed`, `speaker-name`) and a duplicate `playback-speed` key.
 - 🔧 **Testing**: Added coverage for subtitle extraction, SRT to WebVTT conversion, the Zip Slip guard and trusted-domain boundaries. Fixed a memorial test that only failed in positive UTC offsets because its mock compared `toISOString()` against a date parsed as local midnight.
 
+## v26.4.0
+
+### ✨ New Features
+
+- ✨ **Meeting Timer**: A new meeting timer feature has been added. It is optional and can be enabled in the advanced settings, if desired. The timer can be used to allow the media operator to keep track of the time spent on meeting parts, or to display the time spent on the current meeting part on a dedicated screen visible only to the speaker.
+
 ## v26.3.1
 
 ### 🛠️ Improvements and Tweaks
