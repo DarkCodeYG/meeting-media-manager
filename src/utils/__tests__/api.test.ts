@@ -135,7 +135,14 @@ describe('fetchMemorials', () => {
     vi.spyOn(dateUtils, 'isInPast').mockImplementation((value) => {
       const dateValue = new Date(value);
       if (Number.isNaN(dateValue.getTime())) return false;
-      return dateValue.toISOString().startsWith('2024-04-24');
+      // Compare local date parts, not toISOString(): 'YYYY/MM/DD' strings parse
+      // as local midnight, so in any positive UTC offset (e.g. UTC+9) the ISO
+      // form lands on the previous day and this mock would never match.
+      return (
+        dateValue.getFullYear() === 2024 &&
+        dateValue.getMonth() === 3 && // April
+        dateValue.getDate() === 24
+      );
     });
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
