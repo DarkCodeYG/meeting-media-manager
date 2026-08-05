@@ -193,6 +193,9 @@ export const electronApi: ElectronApi = {
     throw new Error('Function not implemented.');
   },
   pathToFileURL,
+  pauseAllDownloads: function () {
+    throw new Error('Function not implemented.');
+  },
   PLATFORM: 'win32',
   quitAndInstall: function () {
     throw new Error('Function not implemented.');

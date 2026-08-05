@@ -1049,7 +1049,7 @@ const checkMemorialDate = async () => {
       // Suppress error if memorial date is next year: this year's publication
       // is no longer available after the memorial passes, which is expected.
       const memorialYear = parseInt(
-        (currentSettings.value?.memorialDate ?? '').split('/')[0],
+        (currentSettings.value?.memorialDate ?? '').split('/')[0] ?? '',
       );
       if (memorialYear <= new Date().getFullYear()) {
         createTemporaryNotification({
