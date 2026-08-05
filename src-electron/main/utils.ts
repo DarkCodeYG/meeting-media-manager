@@ -116,7 +116,7 @@ export function isJwDomain(url: string): boolean {
       [urlVariables?.base]
         .filter((d): d is string => !!d)
         .map((d) => new URL(`https://${d}/`).hostname),
-    ).some((domain) => parsedUrl.hostname.endsWith(domain));
+    ).some((domain) => isHostnameOrSubdomain(parsedUrl.hostname, domain));
   } catch {
     return false;
   }
@@ -183,10 +183,22 @@ export function isTrustedDomain(url?: string): boolean {
       ]
         .filter((d): d is string => !!d)
         .map((d) => new URL(d).hostname),
-    ).some((domain) => parsedUrl.hostname.endsWith(domain));
+    ).some((domain) => isHostnameOrSubdomain(parsedUrl.hostname, domain));
   } catch {
     return false;
   }
+}
+
+/**
+ * Checks whether a hostname is exactly a given domain or one of its subdomains.
+ * Using a plain `endsWith` check would incorrectly match look-alike domains
+ * such as `evil-jw.org` against `jw.org`, so a `.` boundary is required.
+ * @param hostname The hostname to check
+ * @param domain The trusted domain to match against
+ * @returns Whether the hostname is the domain or a subdomain of it
+ */
+function isHostnameOrSubdomain(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
 }
 
 /**

@@ -564,6 +564,22 @@ const processFileEntry = async (
 };
 
 /**
+ * Checks that a zip entry resolves inside the extraction directory.
+ *
+ * Guards against "Zip Slip": a crafted entry name containing `../` sequences
+ * would otherwise resolve outside of `output`, letting a malicious archive
+ * write files anywhere on disk.
+ */
+export const isSafeZipEntryPath = (output: string, fullPath: string) => {
+  const resolvedOutput = resolve(output);
+  const resolvedFullPath = resolve(fullPath);
+  return (
+    resolvedFullPath === resolvedOutput ||
+    resolvedFullPath.startsWith(`${resolvedOutput}/`)
+  );
+};
+
+/**
  * Handles a zip entry
  */
 const handleZipEntry = async (
@@ -571,8 +587,6 @@ const handleZipEntry = async (
   context: UnzipContext,
   state: ZipfileState,
 ): Promise<void> => {
-  const fullPath = join(context.output, entry.fileName);
-
   // Apply filter if provided
   if (
     context.opts?.includes?.length &&
@@ -580,6 +594,13 @@ const handleZipEntry = async (
   ) {
     state.zipfile.readEntry();
     return;
+  }
+
+  const fullPath = join(context.output, entry.fileName);
+
+  if (!isSafeZipEntryPath(context.output, fullPath)) {
+    state.zipfile.close();
+    return state.reject(new Error(`Unsafe zip entry path: ${entry.fileName}`));
   }
 
   // Failsafe checks

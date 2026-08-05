@@ -2160,12 +2160,13 @@ export const getWeMedia = async (lookupDate: Date) => {
          LEFT JOIN Question
            ON Question.DocumentId = DocumentMultimedia.DocumentId
            AND Question.TargetParagraphOrdinal = DocumentMultimedia.BeginParagraphOrdinal
-         WHERE DocumentMultimedia.DocumentId = ${docId}
+         WHERE DocumentMultimedia.DocumentId = ?
            AND CategoryType <> 9
            AND CategoryType <> -1
-           AND (KeySymbol != '${currentStateStore.currentSongbook?.pub}' OR KeySymbol IS NULL)
+           AND (KeySymbol != ? OR KeySymbol IS NULL)
          GROUP BY DocumentMultimedia.MultimediaId
          ORDER BY DocumentParagraph.BeginPosition`, // pictures
+      [docId, currentStateStore.currentSongbook?.pub ?? null],
     );
     for (let i = 0; i < mediaWithoutVideos.length; i++) {
       const item = mediaWithoutVideos[i];
@@ -2322,9 +2323,10 @@ export const getWeMedia = async (lookupDate: Date) => {
            FROM Extract
            INNER JOIN DocumentExtract ON Extract.ExtractId = DocumentExtract.ExtractId
            WHERE Extract.RefMepsDocumentClass = 31
-             AND DocumentExtract.DocumentId = ${docId}
+             AND DocumentExtract.DocumentId = ?
            ORDER BY Extract.ExtractId
            LIMIT 2`,
+          [docId],
         )
         .sort((a, b) => a.BeginParagraphOrdinal - b.BeginParagraphOrdinal)
         .map((item) => {
