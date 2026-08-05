@@ -141,6 +141,7 @@
     "vue-tsc": "^3.2.6"
   },
   "resolutions": {
+    "@electron/rebuild": "4.2.0",
     "vite": "8.0.8"
   },
   "browserslist": [
