@@ -4,6 +4,29 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.1
+
+### 🐞 Bug Fixes
+
+- 🐞 **Subtitles for manually added videos**: Videos added by hand never showed subtitles, even when they had them. `getSubtitlesUrl` only resolves publication media — it needs a KeySymbol and Track to look subtitles up in the JW media API — so local files fell through with an empty `subtitlesUrl` and the player never rendered a `<track>` element. A `.vtt`/`.srt` file sitting next to the video is now used, and failing that, the video's own embedded subtitle track is extracted with FFmpeg (Chromium does not expose container-embedded text tracks).
+- 🐞 **Playback performance**: Every `playMedia()` call started a per-frame `requestAnimationFrame` loop whose only cancel path was the custom-duration branch, so ordinary videos left their loop running and each playback stacked another one. CPU use grew and playback stuttered as a meeting went on. The loop is now cancelled on replacement and teardown, and it no longer re-schedules itself while playback is paused or finished.
+- 🐞 **Timer window**: The timer window did not follow the main window. `syncTimerWindowPosition` was written but never attached to any event, despite v26.4.3-custom.0 announcing the feature.
+- 🐞 **Watchtower picture media**: Pictures could be dropped from the media list when no songbook was configured, because the songbook comparison bound SQL `NULL` and `KeySymbol != NULL` evaluates to unknown.
+- 🐞 **Window drag responsiveness**: The main window's move handler re-entered `import()` on every event; the module is now resolved once.
+
+### 🔒 Security
+
+Ported from upstream, adapted where this fork's code differs.
+
+- 🔒 **Zip Slip**: Crafted `../` entry names in a `.jwpub`/`.zip` could resolve outside the extraction directory. Upstream throws, but `handleZipEntry` runs inside an async yauzl event handler with no try/catch, so this uses the surrounding failsafes' close/reject pattern instead of leaving `unzipFile`'s promise pending forever.
+- 🔒 **SQL injection**: Parameterized the publication media queries in `getWeMedia()`, including a `DocumentExtract` lookup that upstream's own fix missed.
+- 🔒 **Trusted domain matching**: `isJwDomain`/`isTrustedDomain` used a bare `endsWith`, so look-alike hosts such as `evil-jw.org` passed as trusted for navigation, popups, webview `src`, permission requests and `Referer`/`Origin` injection. A dot boundary is now required.
+
+### 🔧 Chores
+
+- 🔧 **Translations**: Removed unused keys (`reset-playback-speed`, `speaker-name`) and a duplicate `playback-speed` key.
+- 🔧 **Testing**: Added coverage for subtitle extraction, SRT to WebVTT conversion, the Zip Slip guard and trusted-domain boundaries. Fixed a memorial test that only failed in positive UTC offsets because its mock compared `toISOString()` against a date parsed as local midnight.
+
 ## v26.3.1
 
 ### 🛠️ Improvements and Tweaks
