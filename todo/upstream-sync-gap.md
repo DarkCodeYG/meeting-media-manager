@@ -156,6 +156,61 @@ i18n JSON은 Crowdin 관리 방침(`37d25264a`)에 따라 **`ko.json` 외에는 
    - 포크 전용 설정은 `constants/` 의 독립 파일로
    - i18n은 이미 "Crowdin이 관리하므로 비영어 파일은 업스트림으로 되돌린다"는 방침이 있음(`37d25264a`) — 유지
 
+## ⚠️ 병합할 때마다 반복될 함정 — 한국어/중국어 로케일이 조용히 사라진다
+
+v26.5.0 병합 중 실제로 발생했습니다. **충돌로 잡히지 않아 놓치기 쉽습니다.**
+
+업스트림은 `fc1001a6f` 에서 Crowdin 번역률 미달 로케일을 삭제했습니다. 여기에 **`ko.json` 과 `cmn-hans.json` 이 포함**됩니다 — 정확히 이 포크의 대상 언어입니다.
+
+문제는 삭제 자체가 아니라 **등록 파일이 충돌 없이 자동 병합**된다는 점입니다:
+
+- `src/i18n/index.ts` — `import ko from './ko.json'` 와 export 항목이 사라짐
+- `src/constants/locales.ts` — `LanguageValue` 유니온, `enabled` 배열, `locales` 배열에서 `ko`/`cmnHans` 항목이 사라짐
+
+`ko.json` 파일 자체는 modify/delete 충돌로 잡히지만, 그것만 살려도 **등록이 없으면 앱에서 한국어가 선택 불가**해집니다. 병합 후 반드시 확인하세요:
+
+```powershell
+Select-String -Path src/i18n/index.ts src/constants/locales.ts -Pattern "ko|cmnHans"
+```
+
+반대로 `fi`/`hu`/`it`/`pt-pt`/`sv`/`sw`/`tl` 는 **업스트림의 삭제를 수용하는 것이 맞습니다** — 포크가 `37d25264a fix: revert non-English i18n files to upstream (Crowdin handles translations)` 로 비영어 로케일을 업스트림에 위임하기로 정했기 때문입니다. 손으로 번역하는 `ko`/`cmn-hans` 만 예외입니다.
+
+## v26.5.0 병합 진행 상황 (브랜치 `sync/upstream-v26.5.0`)
+
+`git merge v26.5.0 --no-commit --no-ff` → 28개 충돌. 아래는 해소한 항목과 판단 근거입니다.
+
+### 해소 완료 (13)
+
+| 파일                                                            | 결정                                        | 근거                                                                                                                                   |
+| --------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/i18n/ko.json`, `cmn-hans.json`                             | **ours 유지**                               | 포크가 손으로 번역하는 대상 언어                                                                                                       |
+| `src/i18n/index.ts`, `src/constants/locales.ts`                 | upstream + ko/cmnHans 재등록                | 위 함정 참조                                                                                                                           |
+| `src/i18n/fi.json`, `hu.json`, `pt-pt.json`                     | **삭제 수용**                               | Crowdin 위임 방침                                                                                                                      |
+| `src/i18n/pt.json`                                              | theirs                                      | 동일                                                                                                                                   |
+| `src/helpers/electron-api-manager.ts`                           | **ours**                                    | 포크가 `@ts-expect-error` 를 `as ElectronApi` 캐스트로 개선했음. 업스트림보다 나음                                                     |
+| `src/migrations/index.ts`                                       | **ours**                                    | 포크 전용 마이그레이션 `26.3.1-custom.0 removeLegacyJwIconsFont` 보존                                                                  |
+| `src-electron/preload/converters.ts`, `src/utils/converters.ts` | **theirs**                                  | v26.5.0이 PDF 변환을 preload → 렌더러(`pdf-parse`)로 이동. `electron-preload.ts`/`electron.d.ts` 도 같은 방향으로 자동 병합되어 일관됨 |
+| `docs/src/sl/index.md`                                          | theirs                                      | 업스트림 문서                                                                                                                          |
+| `release-notes/ko.md`                                           | **ours**                                    | 포크 전용 릴리스 노트                                                                                                                  |
+| `yarn.lock`                                                     | theirs (이후 `yarn install` 로 재생성 필요) |                                                                                                                                        |
+
+### 미해소 (15)
+
+- _설정/메타 (5)_: `.github/workflows/build.yml`, `.mergify.yml`, `CHANGELOG.md`, `package.json`(버전은 포크 값 유지), `scripts/update-jw-icons-fallbacks.mjs`(add/add — 양쪽이 각자 추가)
+- _코드 — 비교적 단순 (6)_: `src/stores/jw.ts`, `src/pages/MediaCalendarPage.vue`, `src/components/dialog/{DialogDisplayPopup,DialogDownloadsPopup,DialogBackgroundMusicPopup}.vue`, `src/helpers/mediaPlayback.ts`
+- _코드 — 포크 정체성, 신중히 (4)_: `src/helpers/jw-media.ts`, `src/layouts/MainLayout.vue`, `src/pages/MediaPlayerPage.vue`, `src/components/dialog/DialogTimerPopup.vue`
+
+### 확인된 사실 — 조용한 손실은 i18n 외에 없었음
+
+포크가 수정한 90개 파일 중 자동 병합된 것들을 `git diff HEAD --numstat` 으로 검사한 결과, 포크 기능이 사라진 파일은 없었습니다. `MediaItem.vue` 가 68줄 삭제/68줄 추가로 크게 변했지만 업스트림의 코드 재배치이며 포크의 playback speed 관련 코드는 그대로 유지됩니다.
+
+### 되돌리려면
+
+```sh
+git merge --abort      # 병합 전체 취소
+git checkout security/upstream-p0
+```
+
 ### 병합 전 필수 확인
 
 - [ ] `.claude/commands/merge-upstream` 의 기존 전략 확인
