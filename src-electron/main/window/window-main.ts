@@ -1,3 +1,5 @@
+import type * as WindowTimer from 'src-electron/main/window/window-timer';
+
 import { BrowserWindow } from 'electron';
 import { PLATFORM, PRODUCT_NAME } from 'src-electron/constants';
 import { cancelAllDownloads } from 'src-electron/main/downloads';
@@ -23,8 +25,14 @@ export const authorizedClose = {
   authorized: false,
 };
 
+// Loaded lazily, but only once: 'move' fires many times per second while the
+// window is dragged, so re-entering import() on every event would allocate a
+// promise and queue a microtask per frame of the drag.
+let timerWindowModule: null | Promise<typeof WindowTimer> = null;
+
 const syncTimerWindowPosition = () => {
-  void import('src-electron/main/window/window-timer')
+  timerWindowModule ??= import('src-electron/main/window/window-timer');
+  void timerWindowModule
     .then(({ moveTimerWindowThrottled, timerWindowInfo }) => {
       if (timerWindowInfo.timerWindow?.isVisible()) {
         moveTimerWindowThrottled();
@@ -32,6 +40,7 @@ const syncTimerWindowPosition = () => {
     })
     .catch(() => {
       // Ignore errors: timer window sync is best-effort and should never block main window moves.
+      timerWindowModule = null; // allow a retry on the next move
     });
 };
 
