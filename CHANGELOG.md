@@ -4,6 +4,12 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.4
+
+### 🐞 Bug Fixes
+
+- 🐞 **Congregation lookup wiped the configured language**: Regression from custom.2. The meetings API tags a congregation with the language it _meets_ in — a Chinese congregation returns `CHM` ("Chinese (Mandarin)"), a spoken entry, while the app's language list holds written languages. `CHM` never matched, and the lookup then fell back to English, replacing a correct configuration. That took the yeartext with it (stored per language) and hid the pinyin toggle (gated on `lang === 'CHS'`). The lookup now leaves the language alone unless it actually resolves, and maps `CHM` to `CHS`, restoring the spoken-to-written step the retired endpoint used to provide. If your language was changed, set it back in Settings — nothing else was affected.
+
 ## v26.4.7-custom.3
 
 ### ✨ New Features
