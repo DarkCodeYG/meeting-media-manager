@@ -109,6 +109,7 @@ import { whenever } from '@vueuse/core';
 import BaseDialog from 'components/dialog/BaseDialog.vue';
 import { storeToRefs } from 'pinia';
 import {
+  apiDayToScheduleWeekday,
   applyScheduleToSettings,
   fetchCongregationSuggestions,
   fetchMeetingLocations,
@@ -214,8 +215,8 @@ const selectCongregation = async (congregation: CongregationSearchResult) => {
       }
     }
 
-    // Schedule. Days arrive 0-6 (Sunday first) and times as HH:MM:SS, but
-    // normalizeSchedule expects 1-7 and HH:MM.
+    // Schedule. Days arrive 0-6 counting from Sunday and times as HH:MM:SS, but
+    // normalizeSchedule expects 1-7 counting from Monday and HH:MM.
     const normalized = normalizeSchedule({
       changeStamp: null,
       current: {
@@ -224,14 +225,14 @@ const selectCongregation = async (congregation: CongregationSearchResult) => {
             0,
             5,
           ) as `${number}:${number}`,
-          weekday: selectedMeeting.midweekMeetingDay + 1,
+          weekday: apiDayToScheduleWeekday(selectedMeeting.midweekMeetingDay),
         },
         weekend: {
           time: selectedMeeting.weekendMeetingTime.slice(
             0,
             5,
           ) as `${number}:${number}`,
-          weekday: selectedMeeting.weekendMeetingDay + 1,
+          weekday: apiDayToScheduleWeekday(selectedMeeting.weekendMeetingDay),
         },
       },
       future: null,

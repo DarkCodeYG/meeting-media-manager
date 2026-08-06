@@ -93,3 +93,52 @@ describe('getMeetingLanguageMap', () => {
     expect(fetchJsonMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('apiDayToScheduleWeekday', () => {
+  /**
+   * The API counts 0-6 from Sunday; mwDay/weDay count 0-6 from Monday. These
+   * cases assert the round trip through normalizeSchedule, because that is what
+   * actually reaches the settings — asserting the intermediate 1-7 value alone
+   * would not have caught the off-by-one that shifted every meeting a day later
+   * and stopped it from being recognised on its real date.
+   */
+  const settingsDay = async (apiDay: number) => {
+    const { apiDayToScheduleWeekday, normalizeSchedule } =
+      await import('src/helpers/congregation-schedule');
+    return normalizeSchedule({
+      changeStamp: null,
+      current: {
+        midweek: { time: '19:00', weekday: apiDayToScheduleWeekday(apiDay) },
+        weekend: { time: '10:00', weekday: apiDayToScheduleWeekday(apiDay) },
+      },
+      future: null,
+      futureDate: null,
+    }).current?.weDay;
+  };
+
+  it.each([
+    ['Sunday', 0, '6'],
+    ['Monday', 1, '0'],
+    ['Tuesday', 2, '1'],
+    ['Wednesday', 3, '2'],
+    ['Thursday', 4, '3'],
+    ['Friday', 5, '4'],
+    ['Saturday', 6, '5'],
+  ])('stores API %s (%i) as weDay %s', async (_name, apiDay, expected) => {
+    expect(await settingsDay(apiDay)).toBe(expected);
+  });
+
+  it('agrees with getWeekDay for every day of a real week', async () => {
+    // The authority on the stored format: date.ts matches weDay against
+    // getWeekDay(date). 2026-08-02 is a Sunday, so this walks Sun..Sat.
+    const { apiDayToScheduleWeekday } =
+      await import('src/helpers/congregation-schedule');
+
+    for (let apiDay = 0; apiDay < 7; apiDay++) {
+      const date = new Date(2026, 7, 2 + apiDay);
+      expect(date.getDay()).toBe(apiDay); // the API's own numbering
+      const getWeekDay = date.getDay() === 0 ? 6 : date.getDay() - 1;
+      expect(apiDayToScheduleWeekday(apiDay) - 1).toBe(getWeekDay);
+    }
+  });
+});

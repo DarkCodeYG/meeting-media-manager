@@ -64,6 +64,21 @@ export const getMeetingLanguageMap = async () => {
   return meetingLanguagesPromise;
 };
 
+/**
+ * Converts a meeting day from the hub.jw.org API into the `weekday` that
+ * normalizeSchedule expects.
+ *
+ * The API counts 0-6 from Sunday. The app stores mwDay/weDay counting 0-6 from
+ * Monday — see getWeekDay() in helpers/date.ts, which maps Sunday onto 6, and
+ * the day picker in SelectInput.vue, which labels value '0' as Monday.
+ * normalizeSchedule then subtracts 1, so the offset has to be undone here.
+ *
+ * Passing the API value through unchanged shifts every meeting a day later,
+ * which stops the meeting from being recognised on its real date at all.
+ */
+export const apiDayToScheduleWeekday = (apiDay: number): number =>
+  ((apiDay + 6) % 7) + 1;
+
 export const normalizeSchedule = (
   schedule: ScheduleDetails,
 ): NormalizedSchedule => {
@@ -211,8 +226,9 @@ export const syncMeetingSchedule = async (force = false) => {
       );
       if (!selectedMeeting) return false;
 
-      // The new API reports days as 0-6 (Sunday-Saturday) and times as HH:MM:SS,
-      // while normalizeSchedule expects 1-7 and HH:MM.
+      // The new API reports days as 0-6 counting from Sunday and times as
+      // HH:MM:SS, while normalizeSchedule expects 1-7 counting from Monday and
+      // HH:MM.
       const normalized = normalizeSchedule({
         changeStamp: null,
         current: {
@@ -221,14 +237,14 @@ export const syncMeetingSchedule = async (force = false) => {
               0,
               5,
             ) as `${number}:${number}`,
-            weekday: selectedMeeting.midweekMeetingDay + 1,
+            weekday: apiDayToScheduleWeekday(selectedMeeting.midweekMeetingDay),
           },
           weekend: {
             time: selectedMeeting.weekendMeetingTime.slice(
               0,
               5,
             ) as `${number}:${number}`,
-            weekday: selectedMeeting.weekendMeetingDay + 1,
+            weekday: apiDayToScheduleWeekday(selectedMeeting.weekendMeetingDay),
           },
         },
         future: null,
