@@ -1760,10 +1760,17 @@ export const dynamicMediaMapper = async (
 
     // --- Helper: generate pubMediaId --------------------------------------
     const createPubMediaId = (m: MultimediaItem) => {
+      // Fall back to MultimediaId (unique per picture within the document) when
+      // there's no KeySymbol/IssueTagNumber/MepsDocumentId to key off of.
+      // Without it, plain in-document illustrations sharing a MepsLanguageIndex
+      // — a set of embedded-language picture variants, as in some Watchtower
+      // study articles — all resolve to the same id, so
+      // replaceMissingMediaByPubMediaId treats them as duplicates of one
+      // another and silently drops every one after the first.
       const base =
         m.KeySymbol || m.IssueTagNumber
           ? [m.KeySymbol, m.IssueTagNumber]
-          : [m.MepsDocumentId];
+          : [m.MepsDocumentId || m.MultimediaId];
 
       const extra = [
         m.MepsLanguageIndex === undefined
@@ -2671,8 +2678,14 @@ export async function processMissingMediaInfo({
 
     const mediaExistenceChecks = allMedia.map(async (m) => {
       if (m.KeySymbol || m.MepsDocumentId) {
-        const exists =
-          !!m.StreamUrl || (!!m.FilePath && (await pathExists(m.FilePath)));
+        // A FilePath means a local copy was expected: verify it is actually
+        // still on disk rather than trusting a StreamUrl set alongside it.
+        // StreamUrl is populated after a successful download too, not only for
+        // stream-only media, so the old `StreamUrl || pathExists` check made a
+        // deleted local file look present and it was never re-downloaded.
+        const exists = m.FilePath
+          ? await pathExists(m.FilePath)
+          : !!m.StreamUrl;
         return { exists, media: m };
       }
       return null;
