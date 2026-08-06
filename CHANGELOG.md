@@ -4,6 +4,21 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.5
+
+### 🐞 Bug Fixes
+
+- 🐞 **Every meeting shifted a day later**: Regression from custom.2. The meetings API counts meeting days 0-6 from Sunday, while the app stores them 0-6 from Monday. The lookup added 1 and `normalizeSchedule` subtracted 1, so the two cancelled and the API value was stored as-is. A congregation meeting Thursday and Sunday was recorded as meeting Friday and Monday, and the media calendar followed: the weekend sections were generated for Monday and the midweek ones for Friday. The pre-meeting clock reads the same settings and was off by a day too. Both call sites now convert properly, with the mapping pinned for all seven days and cross-checked against the app's own weekday arithmetic.
+
+  **Already-stored days are not repaired automatically in every case.** If automatic schedule updates are on and the congregation name has not been edited, the next sync corrects them. Otherwise — including when the congregation name was edited, which blocks the sync even via the "refresh meeting schedule" button — set the two meeting days in Settings by hand.
+
+### Reported alongside, not bugs
+
+Both were investigated for this release and neither needed a code change. Recording them because the investigation was wrong about them at first.
+
+- **Public talk title card missing**: the **Public talk title** setting was off. The card requires it regardless of anything else. The shifted weekend day above would have hidden the card on the real weekend date as well, but that was never the operative cause here.
+- **Yeartext missing**: resolved by **fully quitting and reopening the app**. Verified against a copy of an affected profile — the store held the Chinese yeartext and the media window rendered it correctly on a fresh start. While the language was wrong only the English yeartext had been fetched; what kept the media window from picking up the Chinese one afterwards in a live session is not established.
+
 ## v26.4.7-custom.4
 
 ### 🐞 Bug Fixes
