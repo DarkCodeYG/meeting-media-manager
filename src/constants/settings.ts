@@ -697,9 +697,15 @@ export const settingsDefinitions: SettingsItems = {
     subgroup: 'cache',
     type: 'path',
   },
+  // FORK-MERGE: 포크 전용 기능 - 업스트림에 없음. 충돌 시 포크 버전 유지.
+  // hidden 이면 안 됩니다: SettingsPage 의 shouldShowSetting 은 이 키를 CHS 게이트에
+  // 명시적으로 나열해 중국어 회중에만 보이게 하려 하는데, hidden 검사가 먼저 걸려
+  // 그 게이트를 죽은 코드로 만들었습니다. 그러면 SetupWizard 6단계가 유일한 활성화
+  // 경로가 되어, 그 단계를 놓친 사용자는 설정에서 폴더를 지정해도 아무 일이 일어나지
+  // 않습니다 - 프로필을 지우지 않는 한 기능에 도달할 수 없습니다.
   enablePinyinSongs: {
     group: 'advanced',
-    hidden: true,
+    subgroup: 'cache',
     type: 'toggle',
   },
   pinyinSongFolder: {

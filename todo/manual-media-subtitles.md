@@ -1,9 +1,58 @@
-# TODO: 수동 추가 영상의 자막이 표시되지 않는 버그
+# TODO: 자막이 표시되지 않는 버그들
 
-- **상태**: 원인 분석 완료 / 미구현
-- **작성일**: 2026-08-05
+- **상태**: 수동 추가 영상 **수정 완료**(`100878ef9`, custom.1) / `.jwpub` 영상 **수정 완료**(custom.6)
+- **작성일**: 2026-08-05 / **최종 갱신**: 2026-08-06 (`.jwpub` 건 추가)
 - **기준 커밋**: `86e81174a` (origin/master), upstream 비교 기준 `upstream/master` @ 2026-08-03
 - **분류**: 기능 누락(missing feature)에 가까운 버그. 업스트림에 수정 없음.
+
+## 0. `.jwpub` 미디어 목록의 영상 자막 (2026-08-06 추가)
+
+**증상**: `S-418mp-26_CHS_002.jwpub` 을 JW Library 에서 열면 자막이 나오지만, M³ 에 드래그해 넣고 재생하면 안 나옴.
+
+**원인**: [`getSubtitlesUrl`](../src/helpers/fs.ts) 의 영상 판정이 호출자와 달랐습니다.
+
+```js
+// dynamicMediaMapper (호출자) — MimeType 우선, FilePath 는 보조
+const isVideoFile = m.MimeType?.includes('video') || isVideo(m.FilePath);
+subtitlesUrl: isVideoFile ? await getSubtitlesUrl(m, duration) : '',
+
+// getSubtitlesUrl (내부) — FilePath 만 봄  ← 여기서 걸림
+if (isVideo(multimediaItem.FilePath) && KeySymbol && Track) { ... }
+```
+
+`.jwpub` 의 영상 행은 **`FilePath` 가 영상이 아닙니다.** `Multimedia` 행이 미리보기 이미지를 `LinkMultimediaId` 로 참조하면 [`jw-media.ts:2328-2340`](../src/helpers/jw-media.ts#L2328-L2340) 이 **그 이미지의 경로를 영상 행에 복사**하고 이미지 행을 걸러냅니다. 그래서 살아남는 항목은 `.jpg` 경로를 가진 영상이고, `isVideo(FilePath)` 가 거짓이 되어 자막 조회가 아예 시도되지 않았습니다.
+
+### 실측 확인
+
+사용자가 드래그한 실제 파일(`C:\Users\langk\Downloads\S-418mp-26_CHS_002.jwpub`)의 DB를 조회한 결과:
+
+```
+{MultimediaId: 1, MimeType: 'image/jpeg', FilePath: 'S-341-26v_univ_wsr_01.jpg'}
+{MultimediaId: 2, LinkMultimediaId: 1, MimeType: 'video/mp4', KeySymbol: 'S-341-26v', Track: 1}
+```
+
+영상 행에는 `FilePath` 가 **없고** `KeySymbol`/`Track` 은 **있습니다.** 그리고 미디어 API 는 자막을 정상 제공합니다:
+
+```
+GETPUBMEDIALINKS?pub=S-341-26v&track=1&langwritten=CHS&fileformat=MP4
+  -> subtitles: https://cfp2.jw-cdn.org/a/590135f/1/o/S-341-26v_CHS_01.vtt
+```
+
+즉 **자막은 받아올 수 있었고 관문만 막고 있었습니다.**
+
+### 수정
+
+영상 판정을 호출자와 일치시켰습니다(`MimeType` 우선, `FilePath` 보조). 함께 제거한 것:
+
+```js
+let subtitlesPath = multimediaItem.FilePath.split('.')[0] + '.vtt';
+```
+
+이 줄은 아래에서 무조건 덮어써지는 **죽은 코드**였고, 두 가지 문제가 있었습니다 — `split('.')[0]` 은 경로 중간의 점에서 잘리고(사용자 이름·버전 폴더 등), `FilePath` 가 없는 항목에서는 `undefined.split` 으로 **예외**가 납니다. 관문을 완화하면 실제로 그 경로에 도달하므로 제거가 선택이 아니라 필수였습니다.
+
+**테스트**: `src/helpers/__tests__/subtitles-lookup.test.ts` 6개. 실제 DB 행 모양을 그대로 쓰고, **수정 전 코드에서 2개가 실패함을 확인**했습니다(나머지 4개는 관문 유지 검증용).
+
+## 1. 증상 (수동 추가 영상 — 아래는 custom.1 에서 수정됨)
 
 ## 1. 증상
 
