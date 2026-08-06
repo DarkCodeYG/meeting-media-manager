@@ -48,6 +48,24 @@ Windows 타깃은 [quasar.config.ts:171](../quasar.config.ts#L171) 에서 `nsis`
 - `win-unpacked` 패키징 + asar integrity ✅
 - NSIS 인스톨러 — `generate:logos` 실행 후 진행 가능
 
+### 새 셸에서 빌드하기 전 PATH
+
+Node와 **Python 둘 다** 필요합니다. Python이 빠지면 UI 컴파일과 패키징은 진행되다가 네이티브 리빌드 단계에서 실패합니다:
+
+```
+node-gyp failed to rebuild 'dist\electron\UnPackaged\node_modules\@jitsi\robotjs'
+```
+
+2.5절의 CI 실패(`Could not find any Visual Studio installation`)와 메시지가 비슷하지만 **원인이 다릅니다** — 이쪽은 Python 부재입니다.
+
+```powershell
+$env:PATH = "$env:APPDATA\fnm\node-versions\v24.19.0\installation;" +
+            "$env:LOCALAPPDATA\Programs\Python\Python312;" +
+            "$env:LOCALAPPDATA\Programs\Python\Python312\Scripts;$env:PATH"
+```
+
+`fnm` PATH는 사용자 환경변수에 등록되어 있지만 **node 실행 파일은 버전 디렉터리 아래**에 있어 위처럼 직접 넣어야 합니다. PowerShell 프로필의 `fnm env` 초기화는 대화형 셸에서만 적용됩니다.
+
 ### 빌드 중 나오는 무해한 경고
 
 - `npm error extraneous: ...` / `npm error missing: electron@>=30.3.0, required by electron-dl-manager` — electron-builder의 의존성 수집기가 `dist/electron/UnPackaged` 에서 npm으로 트리를 검사하며 내는 경고입니다. 업스트림이 `1d1d312a1 chore: add electron to second package.json` 로 정리했으므로 동기화 시 사라집니다.
