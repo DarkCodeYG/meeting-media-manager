@@ -45,7 +45,7 @@
 
 `E` 항목이 언어가 영어로 덮어써졌던 기간의 흔적이고, `CHS` 는 사용자가 언어를 되돌렸을 때 받아온 것입니다.
 
-**결론**: 영속 데이터와 렌더 경로에는 결함이 없습니다. 증상은 **실행 중인 세션의 휘발성 상태** 문제이며 **앱을 완전히 종료하고 다시 실행하면 해소**됩니다. 아래 폐기했던 래치 가설이 실은 이 세션 상태를 정확히 설명합니다 — 다만 재시작으로 풀리므로 사용자에게는 재시작이 답이고, 코드 수정은 별도 작업입니다.
+**결론**: 영속 데이터와 렌더 경로에는 결함이 없습니다. 증상은 **실행 중인 세션의 휘발성 상태** 문제이며 **앱을 완전히 종료하고 다시 실행하면 해소**됩니다.
 
 ## 메커니즘은 규명되지 않았습니다
 
@@ -71,11 +71,13 @@
 
 공통 원인은 **정적 분석으로 인과를 확정하려 한 것**입니다. 실측한 사실(요일 값이 밀렸다, 연표어가 새 실행에서 표시된다)은 맞았고, 그 사실들을 이어붙인 추론이 틀렸습니다.
 
-## 남은 실제 결함 — `yeartextWatcherPaused` 고정 (별도 작업)
+## 별개로 존재하는 결함 — `yeartextWatcherPaused` 고정 (이번 증상의 원인은 아님)
 
-[`MainLayout.vue`](../src/layouts/MainLayout.vue) 의 `handlePublicTalkTitle` 은 제목 표시 중 `yeartextWatcherPaused = true` 로 연표어 워처를 멈추고, `html: null` 이벤트에서만 재개합니다. [`PublicTalkTitleCard.vue`](../src/components/media/PublicTalkTitleCard.vue) 의 `onBeforeUnmount` 는 리스너만 제거하고 `stopTitleDisplay()` 를 호출하지 않으므로, 카드가 **표시 중에 언마운트되면 그 플래그가 고정**됩니다. 요일 버그로 `pt` 섹션이 사라진 것이 정확히 그 언마운트를 일으킵니다.
+**이 절은 이번 증상과 무관합니다.** 조사 중 원인으로 의심했다가 반증되었고, 그 과정에서 발견한 별개의 결함이므로 남겨 둡니다.
 
-`yeartextWatcherPaused` 는 **영속되지 않는 `ref`** 이므로 재시작하면 `false` 로 돌아가고 `watchImmediate(yeartext)` 가 다시 post 합니다. 그래서 이 결함은 **실행 중인 세션에서만** 증상을 만들고, 위 실측처럼 새로 띄우면 정상입니다.
+[`MainLayout.vue`](../src/layouts/MainLayout.vue) 의 `handlePublicTalkTitle` 은 제목 표시 중 `yeartextWatcherPaused = true` 로 연표어 워처를 멈추고, `html: null` 이벤트에서만 재개합니다. [`PublicTalkTitleCard.vue`](../src/components/media/PublicTalkTitleCard.vue) 의 `onBeforeUnmount` 는 리스너만 제거하고 `stopTitleDisplay()` 를 호출하지 않으므로, 카드가 **표시 중에 언마운트되면 그 플래그가 고정**됩니다.
+
+`yeartextWatcherPaused` 는 **영속되지 않는 `ref`** 이므로 재시작하면 `false` 로 돌아갑니다. 따라서 이 결함은 실행 중인 세션에서만 증상을 만듭니다.
 
 ### 시도했다가 되돌린 수정 — 부작용이 더 컸음
 
@@ -88,7 +90,7 @@
 | 후보                                 | 결과 | 근거                                                                                                                                        |
 | ------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | CHS 연표어를 서버가 주지 않음        | ❌   | `wol.jw.org/wol/finder?docid=1102026800&wtlocale=CHS` 실호출 → 196자 중국어 정상 반환 (E/KO/CHM 도 정상)                                    |
-| `lang` 이 아직 영어                  | ❌   | 병음 토글이 표시됨. 그 조건은 [`HeaderCalendar.vue:351`](../src/components/header/HeaderCalendar.vue#L351) 의 `lang === 'CHS'` 리터럴 비교  |
+| `lang` 이 아직 영어                  | ❌   | 프로필 사본의 설정을 직접 읽어 `lang: 'CHS'` 확인. 미디어 창도 중국어 연표어를 렌더                                                         |
 | 이번 작업의 CSS 변경                 | ❌   | 커밋 범위에 `MediaPlayerPage.vue` 변경 없음. `app.scss` 는 5줄(`.action-island-container` z-index)뿐                                        |
 | 사전집회 시계가 가림                 | ❌   | `.base-layer.clock-active :deep(#preMeetingClockContainer)` 는 시계 위치만 지정. 연표어를 숨기는 규칙 없음                                  |
 | `fontsSet` 이 false                  | ❌   | [`MediaPlayerPage.vue:1310`](../src/pages/MediaPlayerPage.vue#L1310) — 폰트 로드가 실패해도 무조건 `true`                                   |
@@ -126,11 +128,31 @@ Start-Process "dist\electron\Packaged\win-unpacked\Meeting Media Manager.exe" `
 - `SettingsPage.vue:323` — `watch([lang, langFallback])`, immediate 아님
 - `SetupWizard.vue:703`
 
-**회중이 이미 선택된 상태로 앱을 시작하고 계속 온라인이면 어느 것도 발동하지 않습니다.** 연표어는 영속 스토어에 이미 있는 값에만 의존합니다. `yeartexts[2026][CHS]` 가 한 번도 채워지지 않았다면(언어가 영어로 바뀐 동안 `langs = Set(['E'])` 만 조회) 사용자가 설정에서 언어를 건드리거나 오프라인→온라인 전환이 일어날 때까지 계속 비어 있습니다.
+**회중이 이미 선택된 상태로 앱을 시작하고 계속 온라인이면 어느 것도 발동하지 않습니다.** 연표어는 영속 스토어에 이미 있는 값에만 의존합니다.
 
-이 경로라면 **설정에서 언어를 다른 값으로 바꾸고 다시 CHS로 되돌리면 복구**됩니다. 사용자에게 시켜볼 수 있는 가장 값싼 검증입니다.
+또한 [`current-state.ts`](../src/stores/current-state.ts) 의 게터는 설정된 언어만 봅니다:
+
+```js
+return textsForYear[lang] || (langFallback && textsForYear[langFallback]);
+```
+
+`updateYeartext` 는 **항상 `E` 도 함께 받아오는데**(`langs = new Set(['E', lang])`) 게터는 `langFallback` 이 명시적으로 설정되지 않으면 영어로 폴백하지 않습니다. 확인한 프로필의 `langFallback` 은 `null` 이었습니다. 그래서 `yeartexts[2026].E` 가 있어도 `CHS` 가 아직 없으면 **화면이 빈 상태**가 됩니다.
+
+최초 설정 시나리오에서 이것이 실제로 발동하는지는 확인하지 못했습니다. 다음 조사 때 여기서 시작하는 것이 합리적입니다.
+
+## 다음 조사자를 위한 재현 조건
+
+사용자 A/B 실험으로 확보된, **사용자 프로필이 필요 없는** 재현 절차:
+
+1. 앱을 완전히 삭제(또는 빈 `--user-data-dir` 로 실행)
+2. 초기 설정 마법사를 끝까지 진행하며 미디어 언어를 중국어 간체로 지정
+3. 설정 완료 직후 미디어 창을 확인 → **연표어 없음**
+4. 앱을 완전히 종료하고 재실행 → **연표어 표시됨**
+
+마법사를 CDP 로 자동 진행하려 했으나 폴더 선택이 네이티브 대화상자를 띄워 막혔습니다. 수동으로 마법사를 진행한 뒤 CDP 로 관찰하는 방식이 현실적입니다(위 절차 참고). 프로덕션 빌드에는 Vue devtools 훅이 없어 Pinia 스토어에 직접 접근할 수 없으므로, 상태는 `localStorage` 의 `jw-store` / `congregation-settings` 를 읽어 확인하십시오.
 
 ## 관련 문서
 
-- [congregation-lookup-broken.md](./congregation-lookup-broken.md) — 함께 보고된 공개강연 카드 문제(원인 규명·수정 완료)
+- [congregation-lookup-broken.md](./congregation-lookup-broken.md) — 같은 시기 함께 보고된 요일 밀림(수정 완료)
+- [pinyin-toggle-unreachable.md](./pinyin-toggle-unreachable.md) — 같은 A/B 실험에서 밝혀진 병음 토글 문제(수정 완료)
 - [local-build-and-test-status.md](./local-build-and-test-status.md) — 로컬 빌드/실행 환경

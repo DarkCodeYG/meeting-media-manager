@@ -64,7 +64,17 @@
 
    > `lookupPeriod` 의 `date` 는 `2026-08-02T15:00:00.000Z` 형태(= KST 자정)입니다. **`slice(0,10)` 으로 요일을 계산하면 하루 이르게 나옵니다** — 조사 중 이것 때문에 한 번 오판했습니다. `new Date(d.date)` 로 로컬 해석해야 합니다.
 
-   **자동 복구가 안 되는 경우가 있습니다.** `syncMeetingSchedule` 은 `congregationNameModified` 가 `true` 면 중단되고 **이 검사는 `force` 로도 우회되지 않습니다**([congregation-schedule.ts:188](../src/helpers/congregation-schedule.ts#L188)). 확인한 프로필이 이 상태였으므로, 자동 동기화도 "집회 일정 새로 고침" 버튼도 동작하지 않습니다 → **요일을 직접 설정해야 합니다.**
+   **복구 경로 (프로필 상태에 따라 다릅니다)**
+
+   `syncMeetingSchedule` 은 `congregationNameModified` 가 `true` 면 중단되고 **이 검사는 `force` 로도 우회되지 않습니다**([congregation-schedule.ts:188](../src/helpers/congregation-schedule.ts#L188)). 확인한 프로필이 이 상태였으므로 자동 동기화도 "집회 일정 새로 고침" 버튼도 동작하지 않습니다.
+
+   그러나 **막힌 것이 아닙니다.** [`settings.ts:73`](../src/constants/settings.ts#L73) 의 `relinkCongregationButton`(한국어 라벨 **"일정 동기화 활성화"**)이 `depends: 'congregationNameModified'` 이므로 **바로 그 상태에서만 나타납니다.** 이 버튼은 회중 검색 창을 열고, 회중을 다시 선택하면 수정된 변환으로 요일이 올바르게 저장되며 `congregationNameModified` 가 `false` 로 돌아가 **자동 동기화까지 복구**됩니다.
+
+   | 프로필 상태                           | 복구 방법                                                  |
+   | ------------------------------------- | ---------------------------------------------------------- |
+   | 자동 업데이트 켜짐 + 회중 이름 미수정 | 다음 앱 시작 시 **자동 복구**                              |
+   | 회중 이름 수정됨                      | 설정 → 회중 집회 → **"일정 동기화 활성화"** 로 회중 재선택 |
+   | 위 둘 다 해당 없음                    | 요일을 직접 지정                                           |
 
    **피해 범위가 수동 검색보다 넓습니다.** `syncMeetingSchedule` 은 [`MainLayout.vue:306`](../src/layouts/MainLayout.vue#L306) 에서 회중 전환/앱 시작 시 자동 실행되므로(`enableAutomaticMeetingScheduleUpdates` 켜짐 + 회중 이름 미수정), 검색을 한 번도 하지 않은 사용자도 영향을 받습니다. 같은 이유로 **수정 후에는 자동 동기화가 요일을 되돌립니다** — 설정이 꺼져 있으면 수동으로 고쳐야 합니다.
 

@@ -4,6 +4,22 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.6
+
+### 🐞 Bug Fixes
+
+- 🐞 **No subtitles for videos in a media-playlist `.jwpub`**: Dragging in something like `S-418mp-26_CHS_002.jwpub` gave videos with no subtitles, while JW Library showed them. The subtitle lookup decided whether an item was a video from its file path, but its caller had already made that decision from the MIME type — and in this kind of publication the video's file path is its preview image, because the database links the two and the image's path is copied onto the video. So the lookup never ran, even though the media API has the subtitles. It now uses the same test as its caller. Verified against the reported file and the live API.
+
+- 🐞 **Pinyin song toggle could not be enabled after initial setup**: The **Prefer pinyin songs** setting was marked hidden, so the only code that ever turned it on was one step of the setup wizard — and that step only appears if the language is already set to Simplified Chinese when you leave the step before it. Miss it and setting the pinyin song folder in Settings appeared to work but did nothing, with no way back short of wiping the profile. The setting is now shown next to the folder for Simplified Chinese congregations, which is what the surrounding code already assumed. Nothing changes for other languages.
+
+### Reported alongside, still open
+
+- **Yeartext missing right after initial setup**: **fully quit and reopen the app** and it appears. Confirmed present in v26.4.7-custom.0 as well, so this is not a regression from the recent congregation-lookup work. The mechanism is not established and no code was changed for it; see `todo/yeartext-not-displayed.md` for the reproduction steps and what has been ruled out.
+
+### Note for anyone whose meeting days were shifted by custom.2
+
+The custom.5 notes said the days had to be set by hand when the congregation name has been edited. There is a better way: Settings → Congregation meetings has a **schedule sync** button that only appears in exactly that case. Using it to pick the congregation again writes the correct days and re-enables automatic syncing.
+
 ## v26.4.7-custom.5
 
 ### 🐞 Bug Fixes
