@@ -273,12 +273,20 @@ export const getSubtitlesUrl = async (
     const currentState = useCurrentStateStore();
     let subtitlesUrl = '';
     if (currentState.currentSettings?.enableSubtitles) {
+      // Match how dynamicMediaMapper decides an item is a video, which is
+      // MimeType first and FilePath only as a fallback. Testing FilePath alone
+      // silently skipped publication videos whose FilePath is not the video:
+      // when a Multimedia row links to a preview image (LinkMultimediaId),
+      // getDocumentMultimediaItems copies that image's path onto the video row,
+      // so FilePath is a .jpg. Every video in a media-playlist .jwpub is shaped
+      // that way, which is why those never showed subtitles even though the
+      // media API has them.
       if (
-        isVideo(multimediaItem.FilePath) &&
+        (multimediaItem.MimeType?.includes('video') ||
+          isVideo(multimediaItem.FilePath)) &&
         multimediaItem.KeySymbol &&
         multimediaItem.Track
       ) {
-        let subtitlesPath = multimediaItem.FilePath.split('.')[0] + '.vtt';
         const subtitleLang = currentState.currentSettings?.langSubtitles;
         const subtitleFetcher: PublicationFetcher = {
           fileformat: 'MP4',
@@ -306,7 +314,7 @@ export const getSubtitlesUrl = async (
           lowPriority: true,
           url: subtitles,
         });
-        subtitlesPath = join(subDirectory, subtitlesFilename);
+        const subtitlesPath = join(subDirectory, subtitlesFilename);
         if (await exists(subtitlesPath)) {
           subtitlesUrl = pathToFileURL(subtitlesPath);
         }
