@@ -20,6 +20,24 @@ import { errorCatcher } from './error-catcher';
 let meetingLanguagesPromise: null | Promise<Map<string, string>> = null;
 
 /**
+ * Spoken meeting languages that need mapping to the written language this fork
+ * actually supports.
+ *
+ * The meetings API tags a congregation with the language it *meets* in, which for
+ * Chinese congregations is `CHM` ("Chinese (Mandarin)"), a spoken entry. The
+ * app's language list holds written/publication languages, so `CHM` never
+ * matches and the lookup used to fall back to English — which silently wiped a
+ * working Chinese setup, taking the pinyin toggle and the yeartext with it.
+ *
+ * Kept deliberately narrow: only the languages this fork ships support for.
+ * Verified against hub.jw.org/meetings/api/languages, which lists CHM and CHS as
+ * separate entries.
+ */
+const SPOKEN_TO_WRITTEN_LANG: Record<string, string> = {
+  CHM: 'CHS', // Chinese (Mandarin), spoken -> Chinese Mandarin (Simplified)
+};
+
+/**
  * Maps a meeting `languageGuid` to a JW language code.
  *
  * The meeting search API identifies languages by GUID rather than by code, so
@@ -36,7 +54,10 @@ export const getMeetingLanguageMap = async () => {
           useCurrentStateStore().online,
         )) || [];
       return new Map(
-        languages.map((language) => [language.languageGuid, language.code]),
+        languages.map((language) => [
+          language.languageGuid,
+          SPOKEN_TO_WRITTEN_LANG[language.code] ?? language.code,
+        ]),
       );
     })();
   }

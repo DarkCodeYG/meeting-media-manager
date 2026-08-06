@@ -194,20 +194,24 @@ const selectCongregation = async (congregation: CongregationSearchResult) => {
     if (!selectedMeeting) return;
 
     // Language. The API identifies it by guid, so resolve through the language
-    // table first.
-    // NOTE: the old endpoint also returned writtenLanguageCode, which this fork
-    // used to map a spoken language (e.g. Mandarin) onto its written variant
-    // (cmn-hans). The replacement endpoint does not expose that, so a spoken-only
-    // language now falls back to English instead. Needs a new data source.
+    // table first (which also maps spoken meeting languages onto the written
+    // language the app uses).
+    //
+    // Only applied when it actually resolves. Defaulting to English on a failed
+    // lookup would overwrite a working configuration — that is how a Chinese
+    // setup lost both its pinyin toggle (gated on lang === 'CHS') and its
+    // yeartext (stored per language).
     if (selectedMeeting.languageGuid) {
       const languageMap = await getMeetingLanguageMap();
       const mappedLanguageCode =
         languageMap.get(selectedMeeting.languageGuid) || '';
-      const resolvedLangCode =
-        jwLanguages.value?.list.find((l) => l.langcode === mappedLanguageCode)
-          ?.langcode || '';
-      currentSettings.value.lang = resolvedLangCode || 'E';
-      currentSettings.value.langSubtitles = resolvedLangCode || null;
+      const resolvedLangCode = jwLanguages.value?.list.find(
+        (l) => l.langcode === mappedLanguageCode,
+      )?.langcode;
+      if (resolvedLangCode) {
+        currentSettings.value.lang = resolvedLangCode;
+        currentSettings.value.langSubtitles = resolvedLangCode;
+      }
     }
 
     // Schedule. Days arrive 0-6 (Sunday first) and times as HH:MM:SS, but
