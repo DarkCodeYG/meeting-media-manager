@@ -3,7 +3,7 @@
 - **상태**: 검색 기능 **수정 완료**(커밋 `d7a7811f9`, 사용자 확인됨). 이식 과정에서 발생한 **회귀 2건도 수정 완료** — 언어 덮어쓰기 `5b29e2b88`(custom.4), 요일 밀림 `6919ebba7`(custom.5)
 - **작성일**: 2026-08-06 / **최종 갱신**: 2026-08-06 (회귀 2건 실측 검증 후)
 - **결론**: **코드는 그대로인데 서버 API가 교체되었습니다.** 업스트림은 2026-05-14에 이미 고쳤고, 포크는 그 이전에서 갈라져 깨져 있었습니다.
-- **함께 보고된 연표어 미표시**는 이 이식과 인과가 있으나 코드 결함은 아니었습니다(재시작으로 해소) — [yeartext-not-displayed.md](./yeartext-not-displayed.md)
+- **함께 보고된 연표어 미표시는 이 이식과 무관합니다** — `custom.0` 에서도 재현됩니다(재시작으로 해소) — [yeartext-not-displayed.md](./yeartext-not-displayed.md)
 
 ## 수정 내용 요약
 
@@ -76,7 +76,7 @@
    | 회중 이름 수정됨                      | 설정 → 회중 집회 → **"일정 동기화 활성화"** 로 회중 재선택 |
    | 위 둘 다 해당 없음                    | 요일을 직접 지정                                           |
 
-   **피해 범위가 수동 검색보다 넓습니다.** `syncMeetingSchedule` 은 [`MainLayout.vue:306`](../src/layouts/MainLayout.vue#L306) 에서 회중 전환/앱 시작 시 자동 실행되므로(`enableAutomaticMeetingScheduleUpdates` 켜짐 + 회중 이름 미수정), 검색을 한 번도 하지 않은 사용자도 영향을 받습니다. 같은 이유로 **수정 후에는 자동 동기화가 요일을 되돌립니다** — 설정이 꺼져 있으면 수동으로 고쳐야 합니다.
+   **피해 범위가 수동 검색보다 넓습니다.** `syncMeetingSchedule` 은 [`MainLayout.vue:306`](../src/layouts/MainLayout.vue#L306) 에서 회중 전환/앱 시작 시 자동 실행되므로(`enableAutomaticMeetingScheduleUpdates` 켜짐 + 회중 이름 미수정), 검색을 한 번도 하지 않은 사용자도 영향을 받습니다. 같은 이유로 수정 후에는 그 조건에 맞는 프로필이 자동으로 복구됩니다(위 표의 첫 줄).
 
    수정: `apiDayToScheduleWeekday()` = `((apiDay + 6) % 7) + 1` 를 두 호출부에서 공용.
 
