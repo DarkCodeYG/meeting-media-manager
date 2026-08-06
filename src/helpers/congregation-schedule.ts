@@ -1,5 +1,7 @@
 import type {
-  GeoRecord,
+  CongregationSearchResult,
+  MeetingLanguage,
+  MeetingSearchResponse,
   NormalizedSchedule,
   ScheduleDetails,
   SettingsValues,
@@ -12,9 +14,34 @@ import { log } from 'src/shared/vanilla';
 import { fetchJson } from 'src/utils/api';
 import { isInPast } from 'src/utils/date';
 import { useCurrentStateStore } from 'stores/current-state';
-import { useJwStore } from 'stores/jw';
 
 import { errorCatcher } from './error-catcher';
+
+let meetingLanguagesPromise: null | Promise<Map<string, string>> = null;
+
+/**
+ * Maps a meeting `languageGuid` to a JW language code.
+ *
+ * The meeting search API identifies languages by GUID rather than by code, so
+ * this table is needed to turn a lookup result into something the app's language
+ * settings understand. Fetched once per session.
+ */
+export const getMeetingLanguageMap = async () => {
+  if (!meetingLanguagesPromise) {
+    meetingLanguagesPromise = (async () => {
+      const languages =
+        (await fetchJson<MeetingLanguage[]>(
+          'https://hub.jw.org/meetings/api/languages',
+          undefined,
+          useCurrentStateStore().online,
+        )) || [];
+      return new Map(
+        languages.map((language) => [language.languageGuid, language.code]),
+      );
+    })();
+  }
+  return meetingLanguagesPromise;
+};
 
 export const normalizeSchedule = (
   schedule: ScheduleDetails,
@@ -138,19 +165,54 @@ export const syncMeetingSchedule = async (force = false) => {
       return false;
     }
 
-    const response = await fetchMeetingLocations(
+    // Two steps now: search by name for a guid, then fetch that guid's details.
+    const suggestions = await fetchCongregationSuggestions(
       currentSettings.value.congregationName,
     );
+    const exactMatch = suggestions.find(
+      (result) =>
+        result.name.toLowerCase() ===
+        currentSettings.value?.congregationName?.toLowerCase(),
+    );
+    if (!exactMatch) return false;
 
-    const congregationOnlineInfo = response?.geoLocationList?.find(
-      (loc) =>
-        loc.properties.orgName === currentSettings.value?.congregationName,
+    const response = await fetchMeetingLocations(exactMatch.congregationGuid);
+
+    const congregationOnlineInfo = response?.items?.find((item) =>
+      item.congregationMeetings.some(
+        (meeting) => meeting.name === currentSettings.value?.congregationName,
+      ),
     );
 
     if (congregationOnlineInfo) {
-      const normalized = normalizeSchedule(
-        congregationOnlineInfo.properties.schedule,
+      const selectedMeeting = congregationOnlineInfo.congregationMeetings.find(
+        (meeting) => meeting.name === currentSettings.value?.congregationName,
       );
+      if (!selectedMeeting) return false;
+
+      // The new API reports days as 0-6 (Sunday-Saturday) and times as HH:MM:SS,
+      // while normalizeSchedule expects 1-7 and HH:MM.
+      const normalized = normalizeSchedule({
+        changeStamp: null,
+        current: {
+          midweek: {
+            time: selectedMeeting.midweekMeetingTime.slice(
+              0,
+              5,
+            ) as `${number}:${number}`,
+            weekday: selectedMeeting.midweekMeetingDay + 1,
+          },
+          weekend: {
+            time: selectedMeeting.weekendMeetingTime.slice(
+              0,
+              5,
+            ) as `${number}:${number}`,
+            weekday: selectedMeeting.weekendMeetingDay + 1,
+          },
+        },
+        future: null,
+        futureDate: null,
+      });
 
       const { currentChanged, futureChanged } = applyScheduleToSettings(
         currentSettings.value,
@@ -189,23 +251,49 @@ export const syncMeetingSchedule = async (force = false) => {
   }
 };
 
-export const fetchMeetingLocations = async (
-  keywords: string,
-): Promise<null | { geoLocationList: GeoRecord[] }> => {
-  const jwStore = useJwStore();
-  const { urlVariables } = jwStore;
-
-  const response = await fetchJson<{ geoLocationList: GeoRecord[] }>(
-    `https://apps.${urlVariables.base || 'jw.org'}/api/public/meeting-search/weekly-meetings`,
+/**
+ * Searches congregations by name.
+ *
+ * First half of the lookup: returns candidates with the guid needed by
+ * `fetchMeetingLocations`.
+ */
+export const fetchCongregationSuggestions = async (keywords: string) =>
+  (await fetchJson<CongregationSearchResult[]>(
+    'https://hub.jw.org/meetings/api/congregations',
     new URLSearchParams({
-      includeSuggestions: 'true',
-      keywords,
-      latitude: '0',
-      longitude: '0',
-      searchLanguageCode: '',
+      congregationName: keywords,
+    }),
+    useCurrentStateStore().online,
+  )) || [];
+
+/**
+ * Fetches meeting details for a congregation guid.
+ *
+ * Second half of the lookup. Replaces the old single-call
+ * `apps.{base}/api/public/meeting-search/weekly-meetings` endpoint, which JW
+ * retired in early May 2026 and which now answers 404 — the reason congregation
+ * lookup stopped returning meeting times.
+ *
+ * Note this endpoint is on `hub.jw.org` and does not follow the configured base
+ * URL, unlike the old one.
+ */
+export const fetchMeetingLocations = async (
+  meetingLocationEventGuid: string,
+): Promise<MeetingSearchResponse | null> => {
+  if (!meetingLocationEventGuid)
+    return { hasResultsOutsideViewport: false, items: [] };
+
+  const details = await fetchJson<MeetingSearchResponse>(
+    'https://hub.jw.org/meetings/api/meeting-search',
+    new URLSearchParams({
+      first: '20',
+      meetingLocationEventGuid,
     }),
     useCurrentStateStore().online,
   );
 
-  return response;
+  return {
+    hasResultsOutsideViewport: details?.hasResultsOutsideViewport || false,
+    items: details?.items || [],
+  };
 };

@@ -1,5 +1,19 @@
 import type { JwLangCode } from './jw/lang';
 
+/** A location returned by `hub.jw.org/meetings/api/meeting-search`. */
+export interface CongRecord {
+  $type?: string;
+  assemblies: unknown[];
+  congregationGroupMeetings: unknown[];
+  congregationMeetings: CongregationMeeting[];
+  conventions: unknown[];
+  distanceFromRequestLocationInMeters?: number;
+  id: string;
+  latitude: number;
+  longitude: number;
+  memorials: unknown[];
+}
+
 export interface CongregationLanguage {
   isSignLanguage: boolean;
   languageCode: JwLangCode;
@@ -8,12 +22,47 @@ export interface CongregationLanguage {
   writtenLanguageCode: JwLangCode[];
 }
 
-export interface GeoRecord {
-  geoId: string;
-  isPrimary: boolean;
-  location: GeoLocation;
-  properties: Properties;
-  type: string;
+/**
+ * A congregation's meeting details. Note the meeting language arrives as
+ * `languageGuid`, not a language code — resolve it through
+ * `getMeetingLanguageMap()`.
+ */
+export interface CongregationMeeting {
+  $type?: string;
+  address: string;
+  groupMeetings: unknown[];
+  id: string;
+  isPrivateHome: boolean;
+  languageGuid: string;
+  midweekMeetingDay: number;
+  midweekMeetingTime: `${number}:${number}:${number}`;
+  name: string;
+  phoneNumber: string;
+  transliteratedAddress?: string;
+  transliteratedName?: string;
+  weekendMeetingDay: number;
+  weekendMeetingTime: `${number}:${number}:${number}`;
+}
+
+/** A name-search hit from `hub.jw.org/meetings/api/congregations`. */
+export interface CongregationSearchResult {
+  congregationGuid: string;
+  formattedName: string;
+  name: string;
+}
+
+/** An entry of `hub.jw.org/meetings/api/languages`, used to resolve languageGuid. */
+export interface MeetingLanguage {
+  $type?: string;
+  code: JwLangCode;
+  languageGuid: string;
+  name: string;
+}
+
+export interface MeetingSearchResponse {
+  $type?: string;
+  hasResultsOutsideViewport: boolean;
+  items: CongRecord[];
 }
 
 export interface NormalizedSchedule {
