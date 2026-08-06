@@ -216,6 +216,8 @@ if (gotTheLock) {
   initSessionListeners();
 
   let videoCaptureCrashCount = 0;
+  let gpuCrashCount = 0;
+  let hasRelaunchedForGpuCrash = false;
 
   function handleProcessCrash(
     type: string,
@@ -249,6 +251,28 @@ if (gotTheLock) {
         );
         // Persist to user prefs for next run and notify user
         setHwAccelDisabled(true, true);
+      }
+    }
+
+    if (isGpuCrash) {
+      gpuCrashCount++;
+      log(`GPU crash count this session: ${gpuCrashCount}`, 'electron', 'log');
+
+      // Once Chromium exhausts its own GPU fallback modes it kills the whole
+      // browser process (IntentionallyCrashBrowserForUnusableGpuProcess), with no
+      // JS event and no chance for the disabled-hw-accel flag set above to take
+      // effect. Relaunch proactively on a second crash in the same session so the
+      // flag is picked up before Chromium can pull the app down uncontrolled.
+      if (gpuCrashCount >= 2 && !hasRelaunchedForGpuCrash) {
+        hasRelaunchedForGpuCrash = true;
+        log(
+          'Repeated GPU crashes this session. Relaunching with hardware acceleration disabled.',
+          'electron',
+          'warn',
+        );
+        app.relaunch();
+        app.exit(0);
+        return;
       }
     }
 
