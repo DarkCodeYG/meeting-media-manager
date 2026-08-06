@@ -4,6 +4,12 @@
 
 For the full list of changes between versions, see our CHANGELOG.md file on GitHub.
 
+## v26.4.7-custom.3
+
+### ✨ New Features
+
+- ✨ **Media Preview**: A small live view of the media window now floats above the footer controls, so the operator can see what is on screen without looking at the second display. Ported from upstream (c0ed281be and its follow-ups). **Off by default**, unlike upstream: the preview runs a second decode plus a canvas downscale alongside playback — upstream itself had to throttle its sync from every playback tick to roughly 5s — and leaving it off keeps the effect of the playback-loop fix in custom.2 measurable. Enable it in Settings, or from the display popup.
+
 ## v26.4.0
 
 ### ✨ New Features
