@@ -220,6 +220,7 @@ export interface SettingsValues {
   enableKeyboardShortcuts: boolean;
   enableMediaAutoExport: boolean;
   enableMediaDisplayButton: boolean;
+  enableMediaPreview: boolean;
   enableMediaWindowFadeTransitions: boolean;
   enableMusicButton: boolean;
   enablePinyinSongs: boolean;

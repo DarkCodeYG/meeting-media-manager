@@ -1442,7 +1442,11 @@ const setMediaPlaying = async (
         ? 'play'
         : 'pause',
     currentPosition: 0,
+    currentPositionUpdatedAt: 0,
     pan: calculatedPan.value,
+    playbackConfirmedToken: 0,
+    playbackRate: playbackRate.value,
+    playToken: 0,
     seekTo: 0,
     subtitlesUrl: media.subtitlesUrl ?? '',
     uniqueId: media.uniqueId,
@@ -1707,10 +1711,18 @@ const { post: postPlaybackRate } = useBroadcastChannel<number, number>({
 // 프리셋: [0.5, 1, 1.1, 1.2, 2, 5, 15]
 const PLAYBACK_RATE_PRESETS = [0.5, 1, 1.1, 1.2, 2, 5, 15];
 
+// Keeps the local ref, the media window and the shared state in step. The media
+// preview reads mediaPlaying.playbackRate to predict where playback should be, so
+// it drifts if any of these three is updated without the others.
+const applyPlaybackRate = (newPlaybackRate: number) => {
+  playbackRate.value = newPlaybackRate;
+  mediaPlaying.value.playbackRate = newPlaybackRate;
+  postPlaybackRate(newPlaybackRate);
+};
+
 const changePlaybackRate = (delta: number, reset = false) => {
   if (reset) {
-    playbackRate.value = 1;
-    postPlaybackRate(playbackRate.value);
+    applyPlaybackRate(1);
     return;
   }
   const currentIndex = PLAYBACK_RATE_PRESETS.indexOf(playbackRate.value);
@@ -1720,8 +1732,7 @@ const changePlaybackRate = (delta: number, reset = false) => {
     0,
     Math.min(PLAYBACK_RATE_PRESETS.length - 1, baseIndex + delta),
   );
-  playbackRate.value = PLAYBACK_RATE_PRESETS[newIndex] ?? 1;
-  postPlaybackRate(playbackRate.value);
+  applyPlaybackRate(PLAYBACK_RATE_PRESETS[newIndex] ?? 1);
 };
 
 const seekTo = (newSeekTo: null | number) => {
@@ -1745,7 +1756,11 @@ function stopMedia(forOtherMediaItem = false) {
   mediaPlaying.value = {
     action: '',
     currentPosition: 0,
+    currentPositionUpdatedAt: 0,
     pan: { x: 0, y: 0 },
+    playbackConfirmedToken: 0,
+    playbackRate: 1,
+    playToken: 0,
     seekTo: 0,
     subtitlesUrl: '',
     uniqueId: '',
@@ -1754,8 +1769,7 @@ function stopMedia(forOtherMediaItem = false) {
   };
   mediaToStop.value = '';
   localFile.value = fileIsLocal();
-  playbackRate.value = 1;
-  postPlaybackRate(1);
+  applyPlaybackRate(1);
 
   if (!forOtherMediaItem) {
     // Stop Zoom screen sharing when media is stopped (unless it's a media switch instead of a stop)
@@ -1776,8 +1790,7 @@ const isCurrentlyPlaying = computed(() => {
 
 watch(isCurrentlyPlaying, (playing) => {
   if (!playing && playbackRate.value !== 1) {
-    playbackRate.value = 1;
-    postPlaybackRate(1);
+    applyPlaybackRate(1);
   }
 });
 

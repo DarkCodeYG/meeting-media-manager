@@ -210,6 +210,11 @@ export const settingsDefinitions: SettingsItems = {
     group: 'mediaRetrievalPlayback',
     type: 'toggle',
   },
+  enableMediaPreview: {
+    depends: 'enableMediaDisplayButton',
+    group: 'mediaRetrievalPlayback',
+    type: 'toggle',
+  },
   beginPlaybackPaused: {
     depends: 'enableMediaDisplayButton',
     group: 'mediaRetrievalPlayback',
@@ -766,6 +771,10 @@ export const defaultSettings: SettingsValues = {
   enableKeyboardShortcuts: false,
   enableMediaAutoExport: false,
   enableMediaDisplayButton: false,
+  // Off by default, unlike upstream: the preview keeps a second decode + canvas
+  // downscale running alongside playback, so it should be an opt-in cost rather
+  // than something existing users inherit silently.
+  enableMediaPreview: false,
   enableMediaWindowFadeTransitions: true,
   enableMusicButton: true,
   enablePinyinSongs: false,

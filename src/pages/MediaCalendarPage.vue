@@ -528,10 +528,14 @@ watch(
       mediaPlaying.value = {
         action: '',
         currentPosition: 0,
+        currentPositionUpdatedAt: 0,
         pan: {
           x: 0,
           y: 0,
         },
+        playbackConfirmedToken: 0,
+        playbackRate: 1,
+        playToken: 0,
         seekTo: 0,
         subtitlesUrl: '',
         uniqueId: '',
@@ -562,12 +566,49 @@ const { data: currentTimeData } = useBroadcastChannel<number, number>({
   name: 'current-time',
 });
 
+// Tracks the last current-time value seen for the active play request, so we can
+// detect when playback has genuinely started advancing (see the watcher below).
+let lastConfirmingPosition: number | undefined;
+
+// Issue a fresh play token whenever a genuinely new playback request starts —
+// either the action just became 'play', or a new url is playing while already in
+// the 'play' state (e.g. skipping to the next item). Consumers like the media
+// preview wait for playbackConfirmedToken to catch up before assuming playback
+// has really begun, instead of racing ahead on the optimistic local 'play'.
+watch(
+  () => [mediaPlaying.value.action, mediaPlaying.value.url] as const,
+  ([newAction]) => {
+    if (newAction !== 'play') return;
+    mediaPlaying.value.playToken += 1;
+    lastConfirmingPosition = undefined;
+  },
+);
+
 watch(
   () => currentTimeData.value,
   (newCurrentTime) => {
     nextTick(() => {
       mediaPlaying.value.currentPosition = newCurrentTime;
+      mediaPlaying.value.currentPositionUpdatedAt = Date.now();
     });
+
+    // Confirm playback only once the reported position has actually advanced
+    // since this play request started — the first report after a seek/play can
+    // still be a stale initial value, not proof playback is moving. The preview
+    // holds off until this catches up, so it starts already in sync instead of
+    // playing early and needing a visible resync.
+    if (
+      mediaPlaying.value.action === 'play' &&
+      typeof newCurrentTime === 'number'
+    ) {
+      if (lastConfirmingPosition === undefined) {
+        lastConfirmingPosition = newCurrentTime;
+      } else if (newCurrentTime > lastConfirmingPosition) {
+        mediaPlaying.value.playbackConfirmedToken =
+          mediaPlaying.value.playToken;
+        lastConfirmingPosition = newCurrentTime;
+      }
+    }
   },
 );
 
