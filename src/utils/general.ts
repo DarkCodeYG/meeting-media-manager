@@ -253,6 +253,13 @@ export function toRawDeep<T>(observed: T): T {
 
   if (val === null) return null as T;
 
+  // Date (and other built-ins like RegExp) have no enumerable own properties, so
+  // the generic Object.entries/fromEntries path below would silently flatten
+  // them to {}. Callers that pass stored media data hit this: the corrupted {}
+  // trips their own date checks, they fall back to today, and that day's media
+  // collapses onto today.
+  if (val instanceof Date) return new Date(val.getTime()) as T;
+
   if (typeof val === 'object') {
     const entries = Object.entries(val).map(([key, val]) => [
       key,

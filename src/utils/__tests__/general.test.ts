@@ -14,6 +14,7 @@ import {
   parseVersion,
   sanitizeId,
   sortByVersion,
+  toRawDeep,
   toTitleCase,
 } from '../general';
 
@@ -171,5 +172,51 @@ describe('parseJsonSafe', () => {
     expect(parseJsonSafe(undefined, { fallback: true })).toEqual({
       fallback: true,
     });
+  });
+});
+
+describe('toRawDeep', () => {
+  it('preserves Date values instead of flattening them to {}', () => {
+    const date = new Date('2026-04-12T10:30:00.000Z');
+    const result = toRawDeep({ date });
+
+    expect(result.date).toBeInstanceOf(Date);
+    expect(result.date.getTime()).toBe(date.getTime());
+  });
+
+  it('returns a copy of the Date rather than the same reference', () => {
+    const date = new Date('2026-04-12T10:30:00.000Z');
+    const result = toRawDeep({ date });
+
+    expect(result.date).not.toBe(date);
+    expect(result.date.getTime()).toBe(date.getTime());
+  });
+
+  it('preserves Dates nested in arrays and deeper objects', () => {
+    // Mirrors the shape that tripped this: stored media keyed by day, each
+    // carrying a Date. Flattening those to {} made callers fall back to today
+    // and collapse a day's media onto today.
+    const date = new Date('2026-04-12T00:00:00.000Z');
+    const result = toRawDeep({
+      congregation: [{ date, mediaSections: [{ items: [{ added: date }] }] }],
+    });
+
+    expect(result.congregation[0]?.date).toBeInstanceOf(Date);
+    expect(
+      result.congregation[0]?.mediaSections[0]?.items[0]?.added,
+    ).toBeInstanceOf(Date);
+  });
+
+  it('still converts plain nested objects and arrays', () => {
+    expect(toRawDeep({ a: [1, { b: 'c' }], d: null })).toEqual({
+      a: [1, { b: 'c' }],
+      d: null,
+    });
+  });
+
+  it('passes primitives through untouched', () => {
+    expect(toRawDeep(42)).toBe(42);
+    expect(toRawDeep('text')).toBe('text');
+    expect(toRawDeep(null)).toBeNull();
   });
 });
