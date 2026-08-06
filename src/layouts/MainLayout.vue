@@ -197,6 +197,11 @@ updateMemorials(online.value);
 updateJwLanguages(online.value);
 
 const hasActiveDownloads = () => {
+  // The meeting-fetch queue repopulates the store. Treat it as activity so a
+  // cache clear cannot run while media is still being loaded back in and judge
+  // that media unreferenced.
+  if (currentState.fetchingMeetingsCount > 0) return true;
+
   return Object.values(downloadProgress.value).some(
     (item) =>
       !item.complete &&
