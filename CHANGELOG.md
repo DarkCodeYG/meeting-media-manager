@@ -4,6 +4,19 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.2
+
+### 🐞 Bug Fixes
+
+Ported from upstream, which had already fixed each of these.
+
+- 🐞 **Congregation lookup**: Searching for a congregation by name returned nothing. The code was unchanged — the endpoint had moved. `apps.jw.org/api/public/meeting-search/*` now answers 404; the lookup runs against `hub.jw.org/meetings/api/*` instead, as two calls (name search for a guid, then that guid's meeting details). Upstream dated the breakage to early May 2026 in d7bb389db; this fork branched in April and never got the fix. Two consequences: the fork's Chinese-variant language matching could not be kept, because the field it relied on (`writtenLanguageCode`) only existed on the retired endpoint, so a spoken-only language now falls back to English; and the results list no longer previews meeting times, since the name search does not return them — it shows the congregation number instead.
+- 🐞 **Media collapsing onto today**: `toRawDeep` rebuilt objects through `Object.entries`, and `Date` has no enumerable own properties, so every `Date` became `{}`. Both callers pass stored media data, their own date checks then failed, they fell back to today, and that day's media collapsed onto today (upstream f6428d10a).
+- 🐞 **Cache clear deleting manually added media**: Smart cache clear could race the background meeting-fetch queue and treat dated Additional Media folders as unreferenced before the store had repopulated. Dated folders for today or later are now protected regardless of store state, and a clear will not start while a meeting fetch is in flight (upstream 7d0bf7bb5).
+- 🐞 **Pictures dropped from a set**: In-document illustrations with no KeySymbol/IssueTagNumber/MepsDocumentId all derived the same pubMediaId from MepsLanguageIndex, so every image after the first in a set of embedded-language variants was merged away as a duplicate. Falls back to MultimediaId, which is unique per picture (upstream ae5fe9149).
+- 🐞 **Deleted media never re-downloaded**: `StreamUrl` is set after a successful download too, not only for stream-only media, so `StreamUrl || pathExists(FilePath)` reported a deleted local file as present. When a FilePath is expected, disk is now the authority.
+- 🐞 **GPU crash recovery**: Chromium kills the whole browser process once it exhausts its GPU fallback modes, with no JS event, so the disabled-hardware-acceleration flag set on the first crash never took effect. A second GPU crash in the same session now relaunches deliberately (upstream a251d6f90).
+
 ## v26.4.7-custom.1
 
 ### 🐞 Bug Fixes
