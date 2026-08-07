@@ -4,6 +4,14 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.9
+
+### 🐞 Bug Fixes
+
+- 🐞 **Turning subtitles on did nothing for media that was already added**: the subtitle file for an item is worked out once, when the media is added or fetched, and nothing ever looked again. A video added while the subtitles setting was off therefore stayed without subtitles no matter how many times it was replayed — removing it and adding it again was the only way to get them. This is most likely to bite after a fresh install, where the setting starts off, leaving everything collected before you find it stuck that way.
+
+  Switching the setting on now goes back over what is already stored, and playing an item that still has no subtitles resolves them in the background for next time. Auto-collected meeting media is refetched, since the information needed to look its subtitles up again is not kept on the stored item; media you added by hand is untouched by that.
+
 ## v26.4.7-custom.8
 
 ### 🐞 Bug Fixes
