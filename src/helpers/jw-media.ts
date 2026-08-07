@@ -34,6 +34,7 @@ import {
   isMwMeetingDay,
   isReplacedByMemorial,
   isWeMeetingDay,
+  updateLookupPeriod,
 } from 'src/helpers/date';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { exportAllDays } from 'src/helpers/export-media';
@@ -308,6 +309,99 @@ const backfillEmbeddedSubtitles = async (
       },
     });
   }
+};
+
+/**
+ * Resolves subtitles for a stored item that has none.
+ *
+ * The subtitle URL is decided once, when media is added, and was never revisited
+ * — so a video added while the subtitles setting was off stayed without them for
+ * good, and replaying it changed nothing. Removing and re-adding was the only way
+ * out, which is how a user found this.
+ *
+ * Only local videos can be handled here: re-resolving publication media needs the
+ * KeySymbol and Track that getSubtitlesUrl looks up by, and a stored MediaItem
+ * keeps neither (pubMediaId joins them into one string with empty parts dropped,
+ * so it cannot be taken apart again). Those are refetched instead — see
+ * backfillMissingSubtitles.
+ *
+ * @param item The stored media item
+ * @param congregation The congregation it belongs to
+ * @returns Whether a sidecar was found synchronously; extraction continues after
+ */
+const resolveSubtitlesForStoredItem = async (
+  item: MediaItem,
+  congregation: string,
+) => {
+  if (item.subtitlesUrl || !item.isVideo || !item.fileUrl) return false;
+  const filePath = fileUrlToPath(item.fileUrl);
+  if (!filePath || !(await pathExists(filePath))) return false;
+
+  const sidecarSubtitlesUrl = await getSidecarSubtitlesUrl(filePath);
+  if (sidecarSubtitlesUrl) {
+    item.subtitlesUrl = sidecarSubtitlesUrl;
+    return true;
+  }
+
+  // Not awaited: FFmpeg reads the whole file, which takes minutes for a long one.
+  void backfillEmbeddedSubtitles(filePath, item.uniqueId, congregation);
+  return false;
+};
+
+/**
+ * Fills in subtitles for everything already stored that is missing them.
+ *
+ * Called when the subtitles setting is switched on, which is the point at which a
+ * user expects their existing media to gain subtitles. Local videos are resolved
+ * in place; auto-fetched publication media cannot be, so its dynamic items are
+ * dropped and refetched — resetDay keeps `additional` items, so nothing the user
+ * added by hand is lost.
+ *
+ * @param congregation The congregation to work through
+ */
+export const backfillMissingSubtitles = async (congregation: string) => {
+  try {
+    const jwStore = useJwStore();
+    let localVideos = 0;
+
+    for (const day of jwStore.lookupPeriod[congregation] ?? []) {
+      for (const mediaSection of day.mediaSections ?? []) {
+        for (const item of mediaSection.items ?? []) {
+          if (item.subtitlesUrl || !item.isVideo || !item.fileUrl) continue;
+          localVideos++;
+          await resolveSubtitlesForStoredItem(item, congregation);
+        }
+      }
+    }
+
+    log(
+      `🔤 [backfillMissingSubtitles] Checked ${localVideos} local video(s); refetching publication media`,
+      'mediaProcessing',
+    );
+
+    updateLookupPeriod({ reset: true });
+  } catch (error) {
+    errorCatcher(error, {
+      contexts: { fn: { congregation, name: 'backfillMissingSubtitles' } },
+    });
+  }
+};
+
+/**
+ * Resolves subtitles for one item on demand, when it turns out to have none.
+ *
+ * Covers whatever backfillMissingSubtitles did not — extraction that failed once,
+ * a sidecar added after the video, media carried over from an older version. Runs
+ * in the background and takes effect from the next playback of that item.
+ *
+ * @param item The item about to play
+ * @param congregation The congregation it belongs to
+ */
+export const resolveSubtitlesIfMissing = (
+  item: MediaItem,
+  congregation: string,
+) => {
+  void resolveSubtitlesForStoredItem(item, congregation).catch(() => undefined);
 };
 
 export const addToAdditionMediaMapFromPath = async (

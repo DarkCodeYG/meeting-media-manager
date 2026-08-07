@@ -1115,6 +1115,7 @@ import { useMediaSectionRepeat } from 'src/composables/useMediaSectionRepeat';
 import { FOOTNOTE_TARGET_PARAGRAPH } from 'src/constants/jw';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { getThumbnailUrl } from 'src/helpers/fs';
+import { resolveSubtitlesIfMissing } from 'src/helpers/jw-media';
 import { toggleMediaWindowVisibility } from 'src/helpers/mediaPlayback';
 import { triggerZoomScreenShare } from 'src/helpers/zoom';
 import { log, throttleWithTrailing, uuid } from 'src/shared/vanilla';
@@ -1434,6 +1435,19 @@ const setMediaPlaying = async (
   }
   skipCustomDurationUpdateOnce.value = false;
   localFile.value = fileIsLocal();
+
+  // A video whose subtitles were never resolved — added while the setting was off,
+  // or an extraction that failed once — would otherwise stay without them for
+  // good, since the URL is only decided when media is added. Runs in the
+  // background; it takes effect from the next playback of this item.
+  if (
+    !props.media.subtitlesUrl &&
+    props.media.isVideo &&
+    currentSettings.value?.enableSubtitles &&
+    currentState.currentCongregation
+  ) {
+    resolveSubtitlesIfMissing(props.media, currentState.currentCongregation);
+  }
 
   mediaPlaying.value = {
     action:

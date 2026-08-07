@@ -122,6 +122,7 @@ import { type QForm, useMeta, useQuasar } from 'quasar';
 import DialogCongregationLookup from 'src/components/dialog/DialogCongregationLookup.vue';
 import { settingsDefinitions, settingsGroups } from 'src/constants/settings';
 import { errorCatcher } from 'src/helpers/error-catcher';
+import { backfillMissingSubtitles } from 'src/helpers/jw-media';
 import { useCurrentStateStore } from 'stores/current-state';
 import { useJwStore } from 'stores/jw';
 import {
@@ -326,6 +327,18 @@ watch(
       langFallback: currentSettings.value?.langFallback,
       online: online.value,
     }),
+);
+
+// Turning subtitles on used to apply only to media added afterwards: the subtitle
+// URL is resolved once, when media is added, so everything already there stayed
+// without subtitles no matter how often it was replayed. Removing and re-adding
+// was the only way out.
+watch(
+  () => currentSettings.value?.enableSubtitles,
+  (enabled, wasEnabled) => {
+    if (!enabled || wasEnabled || !currentState.currentCongregation) return;
+    void backfillMissingSubtitles(currentState.currentCongregation);
+  },
 );
 
 const invalidSettings = computed(() => getInvalidSettings());
