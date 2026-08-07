@@ -4,6 +4,16 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.10
+
+### 🐞 Bug Fixes
+
+Two data-loss fixes taken from upstream. The fork is otherwise staying on this baseline for now; these were worth pulling forward because both delete files the user cannot get back cheaply.
+
+- 🐞 **A publication was deleted when the app could not read it**: a permission error while opening or extracting a `.jwpub` was treated exactly like a damaged file — the downloaded publication was removed to force a fresh download, which then ran into the same unreadable folder. A network share, a folder locked by another program, a drive reconnecting: the file was thrown away for nothing. The publication is now kept when the problem is access rather than damage; a genuinely corrupt file is still replaced. Also handles a Windows quirk where two extractions creating the same folder at once could fail one of them (upstream 75eb3c09f).
+
+- 🐞 **Startup deleted the cached data of congregations it did not recognise**: every launch removed any Additional Media, congregation preferences or public talk outline belonging to a congregation ID that was not in this copy of the app. Those IDs are generated separately by each installation, so if two installations or profiles share one cache folder — which the **cache folder** setting exists to allow — each would delete the other's data simply for not recognising it. Cached data is now removed only when you delete the congregation yourself (upstream a31362be2).
+
 ## v26.4.7-custom.9
 
 ### 🐞 Bug Fixes
