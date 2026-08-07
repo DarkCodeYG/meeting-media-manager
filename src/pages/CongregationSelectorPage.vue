@@ -121,6 +121,7 @@ import BaseDialog from 'components/dialog/BaseDialog.vue';
 import { storeToRefs } from 'pinia';
 import { useMeta } from 'quasar';
 import { useLocale } from 'src/composables/useLocale';
+import { removeCongregationCache } from 'src/helpers/cleanup';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { downloadSongbookVideos } from 'src/helpers/jw-media';
 import { createTemporaryNotification } from 'src/helpers/notifications';
@@ -226,6 +227,9 @@ const autoSelectCongregation = () => {
 
 const removeCongregation = async (id: number | string) => {
   deleteCongregation(id);
+  // Startup no longer deletes the folders of congregations it does not recognise,
+  // so cached data has to be cleared here, while this ID is known to be gone.
+  await removeCongregationCache(String(id));
 };
 
 onMounted(async () => {

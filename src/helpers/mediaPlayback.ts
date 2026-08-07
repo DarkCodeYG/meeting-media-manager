@@ -138,6 +138,22 @@ export async function identifyJwpub(jwpubPath: string) {
 
 const ongoingUnzips = new Map<string, Promise<string | undefined>>();
 
+/**
+ * Whether an error means the file could not be accessed, rather than that it is
+ * damaged.
+ *
+ * The two were treated alike, so a publication sitting in a folder the app
+ * momentarily could not read — a network share, a locked folder, a drive
+ * reconnecting — was deleted as corrupt. The redownload then hit the same
+ * permission problem, so the file was lost for nothing.
+ *
+ * Ported from upstream 75eb3c09f. Upstream also falls back to the default cache
+ * path for the rest of the session; that relies on machinery this fork does not
+ * have, and not deleting the file is the part that matters.
+ */
+const isPermissionError = (error: unknown) =>
+  ['EACCES', 'EPERM'].includes((error as { code?: string })?.code ?? '');
+
 const extractContentsFromJwpub = async (
   jwpubPath: string,
   outputPath: string,
@@ -153,8 +169,12 @@ const extractContentsFromJwpub = async (
       'error',
       error,
     );
-    // If we can't read the entries to even start extraction, the file might be locked or damaged.
-    await remove(jwpubPath).catch(() => undefined);
+    // If we can't read the entries to even start extraction, the file might be
+    // locked or damaged — but a permission error says the folder is unreadable
+    // right now, not that the publication is corrupt.
+    if (!isPermissionError(error)) {
+      await remove(jwpubPath).catch(() => undefined);
+    }
     throw error;
   }
   const expectedContentsSize = jwpubEntries['contents'];
@@ -175,8 +195,11 @@ const extractContentsFromJwpub = async (
         includes: ['contents'],
       });
     } catch (error) {
-      // If unzipping the JWPUB fails, it's likely corrupted.
-      // Remove it to force a re-download on next attempt.
+      // If unzipping the JWPUB fails, it's likely corrupted; remove it to force a
+      // re-download. A permission error is not corruption, and the redownload
+      // would hit the same inaccessible folder, so keep the file in that case.
+      if (isPermissionError(error)) throw error;
+
       await remove(jwpubPath).catch((removeError) =>
         errorCatcher(removeError, {
           contexts: {
@@ -228,6 +251,11 @@ const extractDbFromContents = async (outputPath: string, jwpubPath: string) => {
       const dbFileAfterUnzip = await findDb(outputPath);
       if (!dbFileAfterUnzip) throw new Error('DB still not found after unzip');
     } catch (error) {
+      // Same reasoning as above: an unreadable folder is not a corrupt archive,
+      // and this branch deletes both the extracted contents and the publication
+      // they came from.
+      if (isPermissionError(error)) throw error;
+
       // If unzipping contents fails, it might be corrupted.
       // Remove it so it can be re-extracted next time.
       await remove(contentsPath).catch((removeError) =>
@@ -243,8 +271,10 @@ const extractDbFromContents = async (outputPath: string, jwpubPath: string) => {
           },
         }),
       );
-      // Also remove the source JWPUB as it's the progenitor of the corrupt contents
-      await remove(jwpubPath);
+      // Also remove the source JWPUB as it's the progenitor of the corrupt contents.
+      // Swallow a failure here: throwing from the handler would replace the real
+      // extraction error with a removal error and lose why this started.
+      await remove(jwpubPath).catch(() => undefined);
       throw error;
     }
   }

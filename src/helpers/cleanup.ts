@@ -347,30 +347,57 @@ export const cleanPersistedStores = () => {
   cleanCongregationRecord(useJwStore().lookupPeriod, congIds);
 };
 
-const cleanCongregationFolders = async (root: string, congIds: Set<string>) => {
-  if (!root || !congIds || !(await exists(root))) return;
-  const folders = await readdir(root);
-  await Promise.allSettled(
-    folders
-      .filter((f) => !congIds.has(f.name))
-      .map((f) => remove(join(root, f.name))),
-  );
-};
-
-const cleanPublicTalkPubs = async (folder: string, congIds: Set<string>) => {
-  if (!folder || !congIds || !(await exists(folder))) return;
+/**
+ * Removes the S-34/S-34mp public talk outline file(s) belonging to one
+ * congregation (filename shape `S-34(mp)?_{congId}_...`).
+ */
+const removeCongregationPublicTalkPubs = async (
+  folder: string,
+  congId: string,
+) => {
+  if (!folder || !congId || !(await exists(folder))) return;
   const files = await readdir(folder);
 
   await Promise.allSettled(
     files
-      .filter((f) => /^S-34(?:mp_|_)/.test(f.name))
-      .map((f) => {
-        const congIdOrLang = f.name.split('_')[1];
-        if (!congIdOrLang?.includes('-') || congIds.has(congIdOrLang))
-          return Promise.resolve();
-        return remove(join(folder, f));
-      }),
+      .filter(
+        (f) => /^S-34(?:mp_|_)/.test(f.name) && f.name.split('_')[1] === congId,
+      )
+      .map((f) => remove(join(folder, f.name))),
   );
+};
+
+/**
+ * Deletes one congregation's cached data: Additional Media, Cong Preferences and
+ * its S-34 outlines.
+ *
+ * Congregation IDs are generated locally per install, not tied to any shared
+ * identity, so a cache folder shared by more than one install or profile can hold
+ * data for congregations this process has never heard of. "I don't recognise this
+ * ID" is therefore never a safe reason to delete — only the user removing the
+ * congregation is. Call this straight after removing it from the store, while the
+ * ID is still known to be gone for certain.
+ *
+ * Ported from upstream a31362be2, which replaced a cleanCache() pass that deleted
+ * every unrecognised congregation folder on startup.
+ *
+ * @param congId The congregation whose cached data should go
+ */
+export const removeCongregationCache = async (congId: string) => {
+  if (!congId) return;
+  try {
+    const additionalMediaPath = await getAdditionalMediaPath();
+    await Promise.allSettled([
+      remove(join(additionalMediaPath, congId)),
+      remove(join(await congPreferencesPath(), congId)),
+      removeCongregationPublicTalkPubs(additionalMediaPath, congId),
+    ]);
+    log(`🗑️ Removed cached data for congregation ${congId}`, 'cleanup');
+  } catch (error) {
+    errorCatcher(error, {
+      contexts: { fn: { congId, name: 'removeCongregationCache' } },
+    });
+  }
 };
 
 const cleanDateFolders = async (root?: string) => {
@@ -816,9 +843,11 @@ export const cleanCache = async () => {
 
     const additionalMediaPath = await getAdditionalMediaPath();
 
-    cleanPublicTalkPubs(additionalMediaPath, congIds);
-    cleanCongregationFolders(additionalMediaPath, congIds);
-    cleanCongregationFolders(await congPreferencesPath(), congIds);
+    // Deliberately not deleting the folders of congregations this process does not
+    // recognise. That ran on every startup and wiped another install's data out of
+    // a shared cache folder, since congregation IDs are generated per install.
+    // Removal now happens only when the user deletes the congregation, through
+    // removeCongregationCache().
 
     congIds.forEach((congId) => {
       cleanDateFolders(join(additionalMediaPath, congId));

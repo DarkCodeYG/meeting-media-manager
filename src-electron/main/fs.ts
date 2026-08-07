@@ -447,6 +447,28 @@ export async function openFolderDialog() {
 }
 
 /**
+ * Creates a directory, tolerating the spurious EEXIST that Windows can throw
+ * from a recursive mkdir when another operation concurrently creates the same
+ * directory — a known race in Node's recursive mkdir on Windows, most visible
+ * under heavy concurrent disk I/O such as several unzips at once.
+ *
+ * Only swallowed when the path genuinely is a directory; a file sitting there
+ * still throws.
+ *
+ * Ported from upstream 75eb3c09f.
+ */
+const ensureDirTolerant = async (dirPath: string): Promise<void> => {
+  try {
+    await ensureDir(dirPath);
+  } catch (e) {
+    if ((e as { code?: string })?.code !== 'EEXIST') throw e;
+
+    const existingStat = await stat(dirPath).catch(() => undefined);
+    if (!existingStat?.isDirectory()) throw e;
+  }
+};
+
+/**
  * Creates a directory with retry logic
  */
 const createDirectory = async (
@@ -456,7 +478,7 @@ const createDirectory = async (
 ): Promise<void> => {
   const attemptCreateDir = async (attempt = 1): Promise<void> => {
     try {
-      await ensureDir(fullPath);
+      await ensureDirTolerant(fullPath);
       state.zipfile.readEntry();
     } catch (e) {
       if (attempt < 3) {
@@ -503,7 +525,7 @@ const processFileEntry = async (
 ): Promise<void> => {
   const attemptProcessFile = async (attempt = 1): Promise<void> => {
     try {
-      await ensureDir(dirname(fullPath));
+      await ensureDirTolerant(dirname(fullPath));
       const writeStream = createWriteStream(fullPath);
 
       writeStream.on('error', (e) => {

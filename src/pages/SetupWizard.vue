@@ -19,11 +19,7 @@
               color="negative"
               flat
               :label="t('cancel')"
-              @click="
-                deleteCongregation(currentCongregation);
-                currentCongregation = '';
-                goToPage('/congregation-selector');
-              "
+              @click="cancelSetup"
             />
             <q-btn
               color="primary"
@@ -649,6 +645,7 @@ import TextInput from 'components/form-inputs/TextInput.vue';
 import TimeInput from 'components/form-inputs/TimeInput.vue';
 import { storeToRefs } from 'pinia';
 import { useMeta } from 'quasar';
+import { removeCongregationCache } from 'src/helpers/cleanup';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { downloadSongbookVideos, fetchMedia } from 'src/helpers/jw-media';
 import { localeOptions } from 'src/i18n';
@@ -755,6 +752,19 @@ const goToPage = (path: string) => {
   } catch (error) {
     errorCatcher(error);
   }
+};
+
+/**
+ * Abandoning setup has to clear the half-created congregation's cached data too,
+ * now that startup no longer deletes folders it does not recognise. The ID is read
+ * before it is cleared, since removeCongregationCache needs it.
+ */
+const cancelSetup = async () => {
+  const congId = currentCongregation.value;
+  deleteCongregation(congId);
+  currentCongregation.value = '';
+  goToPage('/congregation-selector');
+  await removeCongregationCache(congId);
 };
 
 const step = ref(1);
