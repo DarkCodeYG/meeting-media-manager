@@ -4,6 +4,18 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.8
+
+### 🐞 Bug Fixes
+
+- 🐞 **Subtitles sat at a different height depending on where they came from**: every cue in a JW-published subtitle file specifies its placement, a little above the bottom edge; the ones the app produces itself — extracted from inside a video, or converted from a `.srt` next to it — specified none, so the player fell back to its own default and put them lower. Mixing media sources in one meeting made the subtitles jump. The app now writes JW's placement into the files it produces, and leaves any cue that already specifies its own placement alone, since that was a decision by whoever wrote the subtitles.
+
+- 🐞 **A congregation search that returned no details left the app stuck**: picking a result whose meeting details did not come back left an internal flag set. The dialog stayed open with no explanation, looking like the search was broken again, and while that flag was set an edit to the congregation name was not registered as an edit — so the next automatic sync overwrote it. The search now says what happened, and no longer trusts the response to contain every field it is supposed to. A failed language-table request also no longer stops language lookups working for the rest of the session.
+
+- 🐞 **Repeated GPU crash recovery could relaunch the app over and over**: the relaunch added in custom.2 counted crashes within a session, and relaunching reset the count, so a machine whose GPU process keeps dying even with acceleration off — a bad driver, a VM, a remote desktop session — relaunched every time. It now only relaunches from a session that started with acceleration still on, which is the only case where restarting changes anything.
+
+- 🐞 **First click after resizing the media preview did nothing**: the guard that stops a resize from being read as a click was not being cleared, so it swallowed the next real click instead.
+
 ## v26.4.7-custom.7
 
 ### 🐞 Bug Fixes
