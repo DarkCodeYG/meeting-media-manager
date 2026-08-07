@@ -109,14 +109,14 @@ import { whenever } from '@vueuse/core';
 import BaseDialog from 'components/dialog/BaseDialog.vue';
 import { storeToRefs } from 'pinia';
 import {
-  apiDayToScheduleWeekday,
   applyScheduleToSettings,
+  buildScheduleFromMeeting,
   fetchCongregationSuggestions,
   fetchMeetingLocations,
   getMeetingLanguageMap,
-  normalizeSchedule,
 } from 'src/helpers/congregation-schedule';
 import { errorCatcher } from 'src/helpers/error-catcher';
+import { createTemporaryNotification } from 'src/helpers/notifications';
 import { log } from 'src/shared/vanilla';
 import { useCurrentStateStore } from 'stores/current-state';
 import { useJwStore } from 'stores/jw';
@@ -184,15 +184,29 @@ const selectCongregation = async (congregation: CongregationSearchResult) => {
     // meeting details behind it.
     const response = await fetchMeetingLocations(congregation.congregationGuid);
     const selectedLocation = response?.items?.find((location) =>
-      location.congregationMeetings.some(
+      location.congregationMeetings?.some(
         (meeting) => meeting.name === congregation.name,
       ),
     );
-    if (!selectedLocation) return;
-    const selectedMeeting = selectedLocation.congregationMeetings.find(
+    const selectedMeeting = selectedLocation?.congregationMeetings?.find(
       (meeting) => meeting.name === congregation.name,
     );
-    if (!selectedMeeting) return;
+
+    // Schedule. Bail out before touching any setting if the details request came
+    // back without a usable meeting: the two endpoints match on name, so a
+    // differently formatted name on either side lands here, and silently doing
+    // nothing looks exactly like the lookup being broken again.
+    const normalized = buildScheduleFromMeeting(selectedMeeting);
+    if (!normalized) {
+      createTemporaryNotification({
+        caption: t('congregation-lookup-no-details-explain'),
+        icon: 'mmm-error',
+        message: t('congregation-lookup-no-details'),
+        timeout: 10000,
+        type: 'warning',
+      });
+      return;
+    }
 
     // Language. The API identifies it by guid, so resolve through the language
     // table first (which also maps spoken meeting languages onto the written
@@ -202,7 +216,7 @@ const selectCongregation = async (congregation: CongregationSearchResult) => {
     // lookup would overwrite a working configuration — that is how a Chinese
     // setup lost both its pinyin toggle (gated on lang === 'CHS') and its
     // yeartext (stored per language).
-    if (selectedMeeting.languageGuid) {
+    if (selectedMeeting?.languageGuid) {
       const languageMap = await getMeetingLanguageMap();
       const mappedLanguageCode =
         languageMap.get(selectedMeeting.languageGuid) || '';
@@ -215,29 +229,6 @@ const selectCongregation = async (congregation: CongregationSearchResult) => {
       }
     }
 
-    // Schedule. Days arrive 0-6 counting from Sunday and times as HH:MM:SS, but
-    // normalizeSchedule expects 1-7 counting from Monday and HH:MM.
-    const normalized = normalizeSchedule({
-      changeStamp: null,
-      current: {
-        midweek: {
-          time: selectedMeeting.midweekMeetingTime.slice(
-            0,
-            5,
-          ) as `${number}:${number}`,
-          weekday: apiDayToScheduleWeekday(selectedMeeting.midweekMeetingDay),
-        },
-        weekend: {
-          time: selectedMeeting.weekendMeetingTime.slice(
-            0,
-            5,
-          ) as `${number}:${number}`,
-          weekday: apiDayToScheduleWeekday(selectedMeeting.weekendMeetingDay),
-        },
-      },
-      future: null,
-      futureDate: null,
-    });
     applyScheduleToSettings(currentSettings.value, normalized);
 
     // Congregation name
@@ -254,9 +245,14 @@ const selectCongregation = async (congregation: CongregationSearchResult) => {
         },
       },
     });
+  } finally {
+    // Must be finally, not a trailing statement: an early return leaves
+    // lookupInProgress stuck on, which silently disables the watcher that marks
+    // a hand-edited congregation name as modified, so the next sync overwrites
+    // the user's edit. It also leaves the dialog open with no explanation.
+    currentState.lookupInProgress = false;
+    dismissPopup();
   }
-  currentState.lookupInProgress = false;
-  dismissPopup();
 };
 
 const dismissPopup = () => {

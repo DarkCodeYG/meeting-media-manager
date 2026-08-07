@@ -92,6 +92,70 @@ describe('getMeetingLanguageMap', () => {
 
     expect(fetchJsonMock).toHaveBeenCalledTimes(1);
   });
+
+  it('retries after a failed request instead of caching the empty result', async () => {
+    // fetchJson answers null rather than throwing, so a request that failed
+    // because the machine was briefly offline is indistinguishable from a real
+    // empty table. Caching it would leave language resolution dead for the rest
+    // of the session.
+    fetchJsonMock
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce([
+        { code: 'KO', languageGuid: 'guid-ko', name: 'Korean' },
+      ]);
+
+    const getMeetingLanguageMap = await loadHelper();
+    expect((await getMeetingLanguageMap()).size).toBe(0);
+    expect((await getMeetingLanguageMap()).get('guid-ko')).toBe('KO');
+    expect(fetchJsonMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('buildScheduleFromMeeting', () => {
+  const meeting = (overrides: Record<string, unknown> = {}) => ({
+    midweekMeetingDay: 4, // Thursday
+    midweekMeetingTime: '19:30:00',
+    weekendMeetingDay: 0, // Sunday
+    weekendMeetingTime: '10:00:00',
+    ...overrides,
+  });
+
+  const build = async (input: unknown) => {
+    const { buildScheduleFromMeeting } =
+      await import('src/helpers/congregation-schedule');
+    return buildScheduleFromMeeting(
+      input as Parameters<typeof buildScheduleFromMeeting>[0],
+    );
+  };
+
+  it('converts days and trims seconds off the times', async () => {
+    expect((await build(meeting()))?.current).toEqual({
+      mwDay: '3', // Thursday
+      mwStartTime: '19:30',
+      weDay: '6', // Sunday
+      weStartTime: '10:00',
+    });
+  });
+
+  it.each([
+    ['no meeting at all', undefined],
+    ['a missing midweek time', meeting({ midweekMeetingTime: undefined })],
+    ['a missing weekend time', meeting({ weekendMeetingTime: undefined })],
+    ['a missing midweek day', meeting({ midweekMeetingDay: undefined })],
+    ['a missing weekend day', meeting({ weekendMeetingDay: undefined })],
+  ])('returns null for %s', async (_name, input) => {
+    // The types mark these required, but this is remote JSON: reading .slice off
+    // a missing time threw, and the caller reported it as a silent no-op.
+    expect(await build(input)).toBeNull();
+  });
+
+  it('accepts day 0, which is Sunday and not a missing value', async () => {
+    // 0 is falsy, so a truthiness check in the guard would reject every
+    // congregation whose weekend meeting is on a Sunday - almost all of them.
+    expect(
+      (await build(meeting({ weekendMeetingDay: 0 })))?.current?.weDay,
+    ).toBe('6');
+  });
 });
 
 describe('apiDayToScheduleWeekday', () => {

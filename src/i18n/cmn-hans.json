@@ -110,6 +110,8 @@
   "congratulations": "恭喜您！",
   "congregation-lookup": "会众搜索",
   "congregation-lookup-explain": "输入关键词，如您的会众名称以及它所在的城市或地区。 这种信息将用于尝试自动检索聚会时间安排和语言。",
+  "congregation-lookup-no-details": "无法获取聚会信息",
+  "congregation-lookup-no-details-explain": "无法获取该会众的聚会时间，因此未作任何更改。请在会众聚会设置中手动指定聚会的星期和时间。",
   "congregationMeetings": "会众聚会",
   "congregationMeetingsDescription": "与您的会众和聚会安排相关的设置",
   "congregationName": "会众名称",

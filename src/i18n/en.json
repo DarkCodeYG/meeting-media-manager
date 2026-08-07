@@ -108,6 +108,8 @@
   "congratulations": "Congratulations!",
   "congregation-lookup": "Congregation lookup",
   "congregation-lookup-explain": "Enter keywords such as your congregation's name as well as the city or area in which it is located. This information will be used to attempt to automatically retrieve the meeting schedule and language.",
+  "congregation-lookup-no-details": "Meeting details unavailable",
+  "congregation-lookup-no-details-explain": "The meeting times for this congregation could not be retrieved, so nothing was changed. Please set the meeting days and times manually in the congregation meeting settings.",
   "congregationMeetings": "Congregation meetings",
   "congregationMeetingsDescription": "Settings relating to your congregation and meeting schedule",
   "congregationName": "Congregation name",

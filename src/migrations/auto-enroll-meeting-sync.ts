@@ -89,7 +89,7 @@ export const autoEnrollMeetingSync: MigrationFunction = async () => {
       );
 
       const exactMatch = response?.items?.some((item) =>
-        item.congregationMeetings.some(
+        item.congregationMeetings?.some(
           (meeting) => meeting.name === congregationName,
         ),
       );

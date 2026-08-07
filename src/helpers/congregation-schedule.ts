@@ -1,4 +1,5 @@
 import type {
+  CongregationMeeting,
   CongregationSearchResult,
   MeetingLanguage,
   MeetingSearchResponse,
@@ -46,20 +47,27 @@ const SPOKEN_TO_WRITTEN_LANG: Record<string, string> = {
  */
 export const getMeetingLanguageMap = async () => {
   if (!meetingLanguagesPromise) {
-    meetingLanguagesPromise = (async () => {
+    const pending = (async () => {
       const languages =
         (await fetchJson<MeetingLanguage[]>(
           'https://hub.jw.org/meetings/api/languages',
           undefined,
           useCurrentStateStore().online,
         )) || [];
-      return new Map(
+      const map = new Map(
         languages.map((language) => [
           language.languageGuid,
           SPOKEN_TO_WRITTEN_LANG[language.code] ?? language.code,
         ]),
       );
+      // Don't let a failed request poison the session: fetchJson answers null
+      // rather than throwing, so an empty map is indistinguishable from being
+      // briefly offline. Caching that would leave every later lookup unable to
+      // resolve a language until the app is restarted.
+      if (!map.size) meetingLanguagesPromise = null;
+      return map;
     })();
+    meetingLanguagesPromise = pending;
   }
   return meetingLanguagesPromise;
 };
@@ -119,6 +127,46 @@ export const normalizeSchedule = (
   }
 
   return normalized;
+};
+
+/**
+ * Turns a meeting from the hub.jw.org API into a NormalizedSchedule.
+ *
+ * The API reports days as 0-6 counting from Sunday and times as HH:MM:SS, while
+ * normalizeSchedule expects 1-7 counting from Monday and HH:MM.
+ *
+ * @param meeting The congregation meeting to convert
+ * @returns The normalized schedule, or null when the API left a day or time out.
+ *   The types mark these required, but this is remote JSON with no such
+ *   guarantee, and reading `.slice` off a missing time would throw.
+ */
+export const buildScheduleFromMeeting = (
+  meeting: CongregationMeeting | undefined,
+): NormalizedSchedule | null => {
+  if (
+    !meeting?.midweekMeetingTime ||
+    !meeting?.weekendMeetingTime ||
+    typeof meeting.midweekMeetingDay !== 'number' ||
+    typeof meeting.weekendMeetingDay !== 'number'
+  ) {
+    return null;
+  }
+
+  return normalizeSchedule({
+    changeStamp: null,
+    current: {
+      midweek: {
+        time: meeting.midweekMeetingTime.slice(0, 5) as `${number}:${number}`,
+        weekday: apiDayToScheduleWeekday(meeting.midweekMeetingDay),
+      },
+      weekend: {
+        time: meeting.weekendMeetingTime.slice(0, 5) as `${number}:${number}`,
+        weekday: apiDayToScheduleWeekday(meeting.weekendMeetingDay),
+      },
+    },
+    future: null,
+    futureDate: null,
+  });
 };
 
 export const applyScheduleToSettings = (
@@ -215,41 +263,17 @@ export const syncMeetingSchedule = async (force = false) => {
     const response = await fetchMeetingLocations(exactMatch.congregationGuid);
 
     const congregationOnlineInfo = response?.items?.find((item) =>
-      item.congregationMeetings.some(
+      item.congregationMeetings?.some(
         (meeting) => meeting.name === currentSettings.value?.congregationName,
       ),
     );
 
     if (congregationOnlineInfo) {
-      const selectedMeeting = congregationOnlineInfo.congregationMeetings.find(
+      const selectedMeeting = congregationOnlineInfo.congregationMeetings?.find(
         (meeting) => meeting.name === currentSettings.value?.congregationName,
       );
-      if (!selectedMeeting) return false;
-
-      // The new API reports days as 0-6 counting from Sunday and times as
-      // HH:MM:SS, while normalizeSchedule expects 1-7 counting from Monday and
-      // HH:MM.
-      const normalized = normalizeSchedule({
-        changeStamp: null,
-        current: {
-          midweek: {
-            time: selectedMeeting.midweekMeetingTime.slice(
-              0,
-              5,
-            ) as `${number}:${number}`,
-            weekday: apiDayToScheduleWeekday(selectedMeeting.midweekMeetingDay),
-          },
-          weekend: {
-            time: selectedMeeting.weekendMeetingTime.slice(
-              0,
-              5,
-            ) as `${number}:${number}`,
-            weekday: apiDayToScheduleWeekday(selectedMeeting.weekendMeetingDay),
-          },
-        },
-        future: null,
-        futureDate: null,
-      });
+      const normalized = buildScheduleFromMeeting(selectedMeeting);
+      if (!normalized) return false;
 
       const { currentChanged, futureChanged } = applyScheduleToSettings(
         currentSettings.value,
