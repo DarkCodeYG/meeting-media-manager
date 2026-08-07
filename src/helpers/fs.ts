@@ -13,6 +13,7 @@ import { Buffer } from 'buffer/';
 import { Platform } from 'quasar';
 import { FULL_HD } from 'src/constants/media';
 import { errorCatcher } from 'src/helpers/error-catcher';
+import { applyDefaultCuePlacement } from 'src/shared/vanilla';
 import { fetchJson } from 'src/utils/api';
 import {
   getCachedUserDataPath,
@@ -350,14 +351,15 @@ const hashPath = (value: string) => {
  * the decimal separator of the timestamps, so a textual conversion is enough.
  */
 export const srtToVtt = (srt: string) =>
-  `WEBVTT\n\n${srt
-    .replace(/^\uFEFF/, '')
-    .replace(/\r\n/g, '\n')
-    .replace(
-      /(\d{2}:\d{2}:\d{2}),(\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}),(\d{3})/g,
-      '$1.$2 --> $3.$4',
-    )
-    .trim()}\n`;
+  `WEBVTT\n\n${applyDefaultCuePlacement(
+    srt
+      .replace(/^\uFEFF/, '')
+      .replace(/\r\n/g, '\n')
+      .replace(
+        /(\d{2}:\d{2}:\d{2}),(\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}),(\d{3})/g,
+        '$1.$2 --> $3.$4',
+      ),
+  ).trim()}\n`;
 
 /**
  * Looks for a subtitle file sitting next to a video (`video.vtt`, `video.srt`).

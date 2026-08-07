@@ -86,6 +86,53 @@ export const debounce = <T extends unknown[]>(
   };
 };
 
+/**
+ * Where JW places its own subtitles. Every cue in a JW-published `.vtt` carries
+ * exactly these settings, e.g.
+ *
+ *     00:00:01.105 --> 00:00:02.231 line:90% position:50% align:center
+ *
+ * 90% of the way down rather than hard against the bottom, so the text clears
+ * the edge of the screen.
+ */
+export const JW_CUE_SETTINGS = 'line:90% position:50% align:center';
+
+/** A WebVTT cue timing line, with optional trailing settings. */
+const CUE_TIMING =
+  /^((?:\d{2,}:)?\d{2}:\d{2}\.\d{3})\s*-->\s*((?:\d{2,}:)?\d{2}:\d{2}\.\d{3})(.*)$/;
+
+/**
+ * Gives every cue that has no placement settings the same ones JW uses.
+ *
+ * Subtitles the app produces itself — extracted from a video container, or
+ * converted from a SubRip sidecar — come out with bare timing lines, so the
+ * player falls back to its default placement and they sit lower on screen than
+ * the JW-published subtitles shown for the rest of a meeting's media. Same
+ * video, different source, visibly different position.
+ *
+ * Cues that already specify placement are left alone: those settings came from
+ * the subtitle author and are more likely to be deliberate, such as lifting a
+ * line clear of on-screen text.
+ *
+ * Lives here rather than beside either caller because both need it and they sit
+ * on opposite sides of the process boundary — SubRip conversion in the
+ * renderer, FFmpeg extraction in the main process.
+ *
+ * @param vtt WebVTT content
+ * @returns The same content with placement settings filled in where missing
+ */
+export const applyDefaultCuePlacement = (vtt: string) =>
+  vtt
+    .split('\n')
+    .map((line) => {
+      const match = CUE_TIMING.exec(line.trimEnd());
+      if (!match) return line;
+      const [, start, end, existingSettings] = match;
+      if (existingSettings?.trim()) return line;
+      return `${start} --> ${end} ${JW_CUE_SETTINGS}`;
+    })
+    .join('\n');
+
 const logPrefixes = {
   api: '🌐 API',
   backgroundMusic: '🎵 Background Music',

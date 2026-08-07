@@ -1,7 +1,8 @@
 import { pathExists } from 'fs-extra/esm';
 import { createHash } from 'node:crypto';
-import { rm as remove, stat } from 'node:fs/promises';
+import { readFile, rm as remove, stat, writeFile } from 'node:fs/promises';
 import { FULL_HD } from 'src/constants/media';
+import { applyDefaultCuePlacement } from 'src/shared/vanilla';
 import { basename, changeExt, extname, join } from 'upath';
 
 const conversionQueue = new Map<string, Promise<string>>();
@@ -178,6 +179,18 @@ export const extractSubtitles = async (
     if (!written?.size) {
       await remove(subtitlesPath).catch(() => undefined);
       return '';
+    }
+
+    // ffmpeg's webvtt muxer emits bare timing lines, so the player placed these
+    // cues lower than the JW-published subtitles used for the rest of a
+    // meeting's media. Failing to rewrite is not worth losing the subtitles
+    // over — the position would just be the old one.
+    try {
+      const extracted = await readFile(subtitlesPath, 'utf8');
+      const placed = applyDefaultCuePlacement(extracted);
+      if (placed !== extracted) await writeFile(subtitlesPath, placed, 'utf8');
+    } catch {
+      /* keep the file as extracted */
     }
 
     return subtitlesPath;
