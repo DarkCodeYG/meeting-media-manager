@@ -287,6 +287,16 @@ const backfillEmbeddedSubtitles = async (
         const item = mediaSection.items?.find((i) => i.uniqueId === uniqueId);
         if (item) {
           item.subtitlesUrl = subtitlesUrl;
+          // Patching the stored item is not enough on its own. Extraction runs
+          // FFmpeg over the whole file — minutes, for a long video — and
+          // setMediaPlaying copies subtitlesUrl into mediaPlaying by value, so
+          // starting playback before extraction finished pinned an empty URL for
+          // the rest of that playback. MediaCalendarPage watches this field and
+          // forwards it, so the track appears as soon as it lands.
+          const currentStateStore = useCurrentStateStore();
+          if (currentStateStore.mediaPlaying.uniqueId === uniqueId) {
+            currentStateStore.mediaPlaying.subtitlesUrl = subtitlesUrl;
+          }
           return;
         }
       }
@@ -3180,6 +3190,50 @@ export function getBestImageUrl(
   }
 }
 
+/**
+ * Second source for the fields getJwMediaInfo can supply, for publications the
+ * mediator API does not index.
+ *
+ * Media-playlist publications are the case that matters: the mediator answers
+ * `pub-S-341-26v_1_VIDEO` with an empty media array, so a video taken from an
+ * S-418mp .jwpub resolved to no subtitles even though GETPUBMEDIALINKS publishes
+ * them. Only duration and subtitles are available here — the pub-media response
+ * carries no title or images — but those are exactly the two the mediator was
+ * being asked for, and today's behaviour for these publications is zeros and
+ * empty strings, so nothing regresses.
+ *
+ * fetchPubMediaLinks is called rather than getPubMediaLinks so a miss does not
+ * flag a download error in the UI; this is a lookup, not a download.
+ */
+const getMediaInfoFromPubMedia = async (publication: PublicationFetcher) => {
+  const jwStore = useJwStore();
+  const currentStateStore = useCurrentStateStore();
+
+  const response = await fetchPubMediaLinks(
+    publication,
+    jwStore.urlVariables.pubMedia,
+    currentStateStore.online,
+  );
+
+  const lang = publication.langwritten;
+  const format = publication.fileformat as keyof PublicationFiles | undefined;
+  const files = lang && format ? response?.files?.[lang]?.[format] : undefined;
+  if (!files?.length) return null;
+
+  const best = findBestResolution(
+    files,
+    currentStateStore.currentSettings?.maxRes,
+  );
+  if (!best || !isMediaLink(best)) return null;
+
+  return {
+    duration: best.duration ?? 0,
+    subtitles: best.subtitles?.url ?? '',
+    thumbnail: '',
+    title: '',
+  };
+};
+
 export const getJwMediaInfo = async (publication: PublicationFetcher) => {
   const jwStore = useJwStore();
   const { urlVariables } = jwStore;
@@ -3197,7 +3251,8 @@ export const getJwMediaInfo = async (publication: PublicationFetcher) => {
     );
 
     const jwMediaInfo = responseObject?.media[0];
-    if (!jwMediaInfo) return emptyResponse;
+    if (!jwMediaInfo)
+      return (await getMediaInfoFromPubMedia(publication)) ?? emptyResponse;
 
     const best = findBestResolution(
       jwMediaInfo.files,

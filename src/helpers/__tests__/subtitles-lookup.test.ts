@@ -119,4 +119,12 @@ describe('getSubtitlesUrl', () => {
 
     expect(getJwMediaInfo).not.toHaveBeenCalled();
   });
+
+  it('gives up quietly when the lookup finds no subtitles', async () => {
+    getJwMediaInfo.mockResolvedValue({ duration: 0, subtitles: '' });
+    const getSubtitlesUrl = await loadHelper();
+
+    await expect(getSubtitlesUrl(jwpubVideo(), 177.261)).resolves.toBe('');
+    expect(downloadFileIfNeeded).not.toHaveBeenCalled();
+  });
 });

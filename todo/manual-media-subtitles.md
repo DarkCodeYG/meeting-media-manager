@@ -1,7 +1,58 @@
 # TODO: 자막이 표시되지 않는 버그들
 
-- **상태**: 수동 추가 영상 **수정 완료**(`100878ef9`, custom.1) / `.jwpub` 영상 **수정 완료**(custom.6)
-- **작성일**: 2026-08-05 / **최종 갱신**: 2026-08-06 (`.jwpub` 건 추가)
+- **상태**: 4건 모두 수정 완료 — 수동 추가 영상 `100878ef9`(custom.1) / `.jwpub` 관문 custom.6 / **mediator API 공백 custom.7** / **추출 타이밍 custom.7**
+- **작성일**: 2026-08-05 / **최종 갱신**: 2026-08-07 (실사용 테스트로 드러난 2건 추가)
+
+> ⚠️ **custom.6 의 `.jwpub` 수정만으로는 사용자 사례가 해결되지 않았습니다.** 관문(`isVideo(FilePath)`)은 실재하는 결함이었지만 — 아직 내려받지 않은 미디어에 해당합니다 — 사용자의 항목은 이미 mp4 가 내려받아진 상태여서 관문을 통과했고 **그 다음 단계인 API 조회에서 막혔습니다**(아래 0.2절). `GETPUBMEDIALINKS` 로 자막 존재를 확인한 것에 만족하고 **앱이 실제로 어느 API 를 쓰는지 확인하지 않은 것**이 원인입니다.
+
+## 0.1 재생 시점 스냅샷 때문에 추출된 자막이 반영되지 않음 (custom.7)
+
+**증상**: 내장 자막이 있는 영상을 수동 추가하고 재생했는데 자막이 나오지 않음. 스토어에는 `subtitlesUrl` 이 정상적으로 들어 있음.
+
+**실측 (사용자 파일 `1112024059_CHS_cnt_1_r720P.mp4`, 166 MB / 17분)**
+
+| 확인 항목                    | 결과                                                           |
+| ---------------------------- | -------------------------------------------------------------- |
+| 내장 자막 트랙               | ✅ `Stream #0:2(cmn): Subtitle: mov_text (tx3g)`               |
+| ffmpeg 추출 산출물           | ✅ `Temp\1112024059_CHS_cnt_1_r720P-9cd51880.vtt` 18.4 KB      |
+| VTT 유효성                   | ✅ 바이트가 `57 45 42 56 54 54 0A 0A` = `WEBVTT\n\n`, BOM 없음 |
+| 스토어 항목의 `subtitlesUrl` | ✅ 위 VTT 를 가리킴                                            |
+| `enableSubtitles`            | ✅ `true`                                                      |
+
+즉 파이프라인 전체가 동작했는데도 화면에 나오지 않았습니다.
+
+**원인**: [`MediaItem.vue:1451`](../src/components/media/MediaItem.vue#L1451) 이 `subtitlesUrl: media.subtitlesUrl ?? ''` 로 **재생 시작 시점의 값을 복사**합니다. `backfillEmbeddedSubtitles` 는 의도적으로 await 하지 않으므로(FFmpeg 최초 사용 시 다운로드가 필요) 긴 영상에서는 추출이 수 분 걸립니다. **추출 완료 전에 재생을 시작하면 빈 문자열이 그 재생 내내 고정**됩니다. 아무 표시도 없어 사용자에게는 그냥 "안 되는" 것으로 보입니다.
+
+**수정**: 추출이 끝나 스토어 항목을 패치할 때, 그 항목이 재생 중이면 `currentState.mediaPlaying.subtitlesUrl` 도 갱신합니다. [`MediaCalendarPage.vue:339-344`](../src/pages/MediaCalendarPage.vue#L339-L344) 가 이 필드를 감시해 미디어 창으로 post 합니다.
+
+> **미확인**: `<track>` 에 `default` 속성이 있지만([`MediaPlayerPage.vue:122-127`](../src/pages/MediaPlayerPage.vue#L122-L127)), **재생 중에 동적으로 추가된 트랙을 Chromium 이 자동 활성화하는지는 확인하지 못했습니다.** `default` 는 원래 리소스 선택 시점에 적용되는 속성입니다. 활성화되지 않는다면 필요한 것은 트랙 `mode = 'showing'` 을 명시적으로 지정하는 것입니다.
+>
+> 다만 **최악의 경우가 기존 동작과 같습니다** — 스토어 항목에는 URL 이 남으므로 그 항목을 **다시 재생하면 스냅샷이 올바른 값을 집어 확실히 표시됩니다.** 그래서 이 수정만으로도 "영구히 안 나옴"이 "다시 재생하면 나옴"으로 바뀝니다.
+
+**이미 추가해 둔 항목은 스토어에 URL 이 있으므로 다시 재생하면 나옵니다.**
+
+## 0.2 mediator API 에 없는 publication 의 자막을 못 찾음 (custom.7)
+
+**증상**: `.jwpub` 에서 추가한 영상의 `subtitlesUrl` 이 비어 있음. custom.6 의 관문 수정 이후에도 동일.
+
+**원인**: [`getJwMediaInfo`](../src/helpers/jw-media.ts) 는 **mediator API** 만 조회하는데(`fetchMediaItems`), 미디어 목록형 publication 은 거기에 인덱싱되어 있지 않습니다.
+
+```
+mediator:   /v1/media-items/CHS/pub-S-341-26v_1_VIDEO  → media: []      ← 없음
+pub-media:  GETPUBMEDIALINKS?pub=S-341-26v&track=1&langwritten=CHS
+              → subtitles.url = .../S-341-26v_CHS_01.vtt                ← 있음
+```
+
+거기에 더해 [`MediaLink`](../src/types/jw/publications.d.ts) 타입에 **`subtitles` 필드가 선언되어 있지 않았습니다.** 실제 응답에는 있는데 타입에 없어서, `getJwMediaInfo` 가 `!isMediaLink(best)` 로 pub-media 쪽 파일을 아예 배제하고 있었습니다.
+
+**수정**: mediator 응답이 비면 pub-media 로 폴백해 `duration` 과 `subtitles` 를 채웁니다. `title`/`thumbnail` 은 pub-media 응답에 없으므로 빈 값이지만, **현재 이 경우의 반환값이 `emptyResponse`(0과 빈 문자열)이므로 어떤 호출부도 퇴행하지 않습니다.** 타입에도 실제 응답으로 확인한 `subtitles` 를 선언했습니다.
+
+`getPubMediaLinks` 대신 `fetchPubMediaLinks` 를 호출합니다 — 전자는 응답이 없을 때 `downloadProgress` 에 오류를 표시하는데, 이것은 다운로드가 아니라 조회이므로 UI 에 오류가 뜨면 안 됩니다.
+
+**테스트**: `src/helpers/__tests__/jw-media-info-fallback.test.ts` 4개. **폴백을 제거하면 핵심 2개가 실패함을 확인**했습니다.
+
+> 함정: `isMediaLink(item)` 은 `!('progressiveDownloadURL' in item)` 로 판별합니다. mediator 파일에만 그 필드가 있으므로, 테스트에서 mediator 응답을 흉내낼 때 이 필드를 빠뜨리면 pub-media 파일로 오인됩니다.
+
 - **기준 커밋**: `86e81174a` (origin/master), upstream 비교 기준 `upstream/master` @ 2026-08-03
 - **분류**: 기능 누락(missing feature)에 가까운 버그. 업스트림에 수정 없음.
 

@@ -127,6 +127,19 @@ export interface MediaLink {
   specialty: string;
   specialtyDescr: string;
   subtitled: boolean;
+  /**
+   * A separate WebVTT track for this file, when one is published. `subtitled`
+   * is about burnt-in subtitles and is unrelated — a file can have
+   * `subtitled: false` and still carry this.
+   *
+   * Was missing from this interface even though GETPUBMEDIALINKS returns it,
+   * which is why the subtitle lookup could only read the mediator API's copy.
+   */
+  subtitles?: {
+    checksum: string;
+    modifiedDatetime: string;
+    url: string;
+  };
   title: string;
   track: number;
   trackImage: {
