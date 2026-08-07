@@ -4,6 +4,20 @@
 
 For translations of the most important changes, see the [`./release-notes/`](./release-notes/) directory.
 
+## v26.4.7-custom.7
+
+### 🐞 Bug Fixes
+
+Both of these are the subtitle problem reported against custom.6, which that release did not actually fix. The guard it corrected was a real defect, but the reported file had already been downloaded and so passed the guard; the failure was one step further on. Two separate causes turned up.
+
+- 🐞 **No subtitles for publications the media API does not index**: subtitles were only ever looked up through one of JW's two media APIs, and media-playlist publications — the kind a `.jwpub` like `S-418mp` contains — are absent from it, while the other API publishes them. Compounding it, the field holding the subtitle URL was missing from the type describing the second API's response, so the code could not have read it even where it looked. The lookup now falls back to the second API, and only for publications the first one does not have, so nothing else changes.
+
+- 🐞 **Subtitles missing when a long video was played straight after adding it**: extracting subtitles from inside a video file runs FFmpeg over the whole file, which takes minutes for a long one, and playback deliberately does not wait for it. Starting playback before extraction finished left that playback with no subtitles for its entire duration, with nothing to indicate why. Extraction now hands the result to whatever is playing. **Media added before this release already has its subtitles stored — playing it again is enough.**
+
+### Note
+
+Whether a subtitle track attached mid-playback is picked up by the player is unverified. If it is not, the fix still turns "never appears" into "appears on the next play".
+
 ## v26.4.7-custom.6
 
 ### 🐞 Bug Fixes
