@@ -175,7 +175,8 @@ if (gotTheLock) {
   }, 10000);
 
   // Check if hardware acceleration should be disabled
-  if (isHwAccelDisabled()) {
+  const startedWithHwAccelDisabled = isHwAccelDisabled();
+  if (startedWithHwAccelDisabled) {
     app.disableHardwareAcceleration();
     log('Hardware acceleration disabled', 'electron', 'log');
   } else {
@@ -263,7 +264,17 @@ if (gotTheLock) {
       // JS event and no chance for the disabled-hw-accel flag set above to take
       // effect. Relaunch proactively on a second crash in the same session so the
       // flag is picked up before Chromium can pull the app down uncontrolled.
-      if (gpuCrashCount >= 2 && !hasRelaunchedForGpuCrash) {
+      //
+      // Only worth doing when this session started with acceleration still on:
+      // that is the only case a relaunch changes anything. The counters live in
+      // the process and reset on relaunch, so without this guard a machine whose
+      // GPU process keeps dying anyway (bad driver, VM, remote desktop) would
+      // relaunch every two crashes, forever.
+      if (
+        gpuCrashCount >= 2 &&
+        !hasRelaunchedForGpuCrash &&
+        !startedWithHwAccelDisabled
+      ) {
         hasRelaunchedForGpuCrash = true;
         log(
           'Repeated GPU crashes this session. Relaunching with hardware acceleration disabled.',

@@ -692,6 +692,19 @@ const debouncedNormalizeCollapsedPreviewAfterResize = useDebounceFn(
   80,
 );
 
+/**
+ * Drops a click-suppression flag left over from a previous interaction.
+ *
+ * suppressNextClick is consumed by toggleModal, but a resize ends on a handle
+ * that stops the click from ever reaching it, so the flag survived and swallowed
+ * the *next* real click instead — the first attempt to open the preview after
+ * resizing it did nothing. Clearing it as each new interaction begins bounds it
+ * to the one click it is meant for.
+ */
+const clearStaleClickSuppression = () => {
+  suppressNextClick.value = false;
+};
+
 const startDrag = (event: PointerEvent) => {
   if (modalOpen.value) return;
 
@@ -700,6 +713,7 @@ const startDrag = (event: PointerEvent) => {
 
   event.stopPropagation();
 
+  clearStaleClickSuppression();
   dragMoved.value = false;
   const position = getCurrentCollapsedPosition();
   dragStart.value = {
@@ -721,6 +735,7 @@ const startResize = (event: PointerEvent, handle: ResizeHandle) => {
   event.preventDefault();
   event.stopPropagation();
 
+  clearStaleClickSuppression();
   resizeMoved.value = false;
   const bounds = element.getBoundingClientRect();
   const anchor = {
