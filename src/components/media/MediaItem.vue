@@ -1438,10 +1438,12 @@ const setMediaPlaying = async (
 
   // A video whose subtitles were never resolved — added while the setting was off,
   // or an extraction that failed once — would otherwise stay without them for
-  // good, since the URL is only decided when media is added. Runs in the
-  // background; it takes effect from the next playback of this item.
+  // good, since the URL is only decided when media is added. A video whose
+  // subtitle file has since been swept from the cache is in the same position,
+  // so items that already carry a URL are passed through too; the check for
+  // whether that URL still resolves happens there. Runs in the background; it
+  // takes effect from the next playback of this item.
   if (
-    !props.media.subtitlesUrl &&
     props.media.isVideo &&
     currentSettings.value?.enableSubtitles &&
     currentState.currentCongregation

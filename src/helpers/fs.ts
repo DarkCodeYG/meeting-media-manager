@@ -3,6 +3,7 @@ import type {
   DownloadedFile,
   FileDownloader,
   FileItem,
+  JwLangCode,
   JwMediaInfo,
   MultimediaItem,
   PublicationFetcher,
@@ -12,6 +13,7 @@ import type {
 import { Buffer } from 'buffer/';
 import { Platform } from 'quasar';
 import { FULL_HD } from 'src/constants/media';
+import mepslangs from 'src/constants/mepslangs';
 import { errorCatcher } from 'src/helpers/error-catcher';
 import { applyDefaultCuePlacement } from 'src/shared/vanilla';
 import { fetchJson } from 'src/utils/api';
@@ -392,6 +394,115 @@ export const getSidecarSubtitlesUrl = async (filePath: string) => {
     return pathToFileURL(convertedPath);
   }
   return '';
+};
+
+/**
+ * `1112024059_KO_cnt_1_r720P.mp4` — videos JW publishes against a document id.
+ */
+const JW_DOCID_FILENAME =
+  /^(\d{6,})_([A-Z]{1,5})(?:_[a-z]+)?_(\d+)(?:_r\d+P)?$/;
+
+/** `lffv_KO_191_r480P.mp4` — and those published as a symbol plus track. */
+const JW_PUB_FILENAME = /^([A-Za-z][\w-]*)_([A-Z]{1,5})_(\d+)(?:_r\d+P)?$/;
+
+/** Every language code JW publishes under, used to reject accidental matches. */
+const JW_LANG_CODES = new Set<string>(Object.values(mepslangs));
+
+/**
+ * Reads back the coordinates JW encodes in the names of its own video files.
+ *
+ * The trailing `_r720P` is optional because the name survives being renamed by
+ * resolution, and the `_cnt` segment because only some document-id videos carry
+ * one.
+ *
+ * @param filePath A local video file
+ * @returns What getJwMediaInfo needs to identify the video, or null when the
+ *   name is not one JW produced
+ */
+const parseJwFilename = (filePath: string): null | PublicationFetcher => {
+  const name = basename(filePath, extname(filePath));
+
+  const docidMatch = JW_DOCID_FILENAME.exec(name);
+  const match = docidMatch ?? JW_PUB_FILENAME.exec(name);
+  if (!match) return null;
+
+  const [, symbol, lang, track] = match;
+  // A language code is the one part of the name that can be checked against
+  // something, so it is what keeps a coincidental `word_AB_12` out.
+  if (!symbol || !lang || !track || !JW_LANG_CODES.has(lang)) return null;
+
+  return {
+    fileformat: 'MP4',
+    langwritten: lang as JwLangCode,
+    track: Number(track),
+    ...(docidMatch ? { docid: Number(symbol) } : { pub: symbol }),
+  };
+};
+
+/**
+ * Finds the subtitles JW publishes for a video the user added by hand.
+ *
+ * Only the separately published `.vtt` carries cue placement. The track muxed
+ * into the `.mp4` has none at all, so subtitles extracted from it sit at the
+ * bottom for the whole video — including the stretches where the published file
+ * lifts them clear of a burnt-in caption. Same video, visibly worse result
+ * depending on how it was added, which is what this closes.
+ *
+ * getSubtitlesUrl cannot cover these files: it resolves a Multimedia row from a
+ * publication database and needs the KeySymbol and Track held there, neither of
+ * which a file dragged in from disk has. The name JW gives the file carries the
+ * same coordinates, so they are read back from it instead.
+ *
+ * @param filePath The local video file
+ * @param comparisonDuration The video's own duration, when known
+ * @returns A file URL for the downloaded WebVTT, or an empty string when the
+ *   name is not JW's, the video has no published subtitles, or the match looks
+ *   wrong
+ */
+export const getJwPublishedSubtitlesUrl = async (
+  filePath: string,
+  comparisonDuration?: number,
+) => {
+  try {
+    if (!isLocalSubtitleCandidate(filePath)) return '';
+
+    const publication = parseJwFilename(filePath);
+    if (!publication) return '';
+
+    const { duration, subtitles } = await getJwMediaInfo(publication);
+    if (!subtitles) return '';
+
+    // A file name is only ever a guess about which video this is, so a duration
+    // that disagrees is treated as the wrong video and dropped, rather than
+    // merely logged as getSubtitlesUrl does: there, a publication row already
+    // established the identity, and here nothing has.
+    if (
+      duration &&
+      comparisonDuration &&
+      Math.abs(duration - comparisonDuration) > 10
+    ) {
+      return '';
+    }
+
+    // The cache directory, not next to the video: the source may sit on a
+    // read-only share, and the same directory already holds extracted subtitles.
+    const filename = basename(subtitles);
+    const dir = await getTempPath();
+    await downloadFileIfNeeded({
+      dir,
+      filename,
+      // Subtitles should not be a high priority download due to their small size
+      lowPriority: true,
+      url: subtitles,
+    });
+    const subtitlesPath = join(dir, filename);
+    return (await exists(subtitlesPath)) ? pathToFileURL(subtitlesPath) : '';
+  } catch (error) {
+    errorCatcher(error, {
+      contexts: { fn: { filePath, name: 'getJwPublishedSubtitlesUrl' } },
+    });
+    return '';
+  }
 };
 
 /**

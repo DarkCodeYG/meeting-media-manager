@@ -40,6 +40,7 @@ import { errorCatcher } from 'src/helpers/error-catcher';
 import { exportAllDays } from 'src/helpers/export-media';
 import {
   getEmbeddedSubtitlesUrl,
+  getJwPublishedSubtitlesUrl,
   getSidecarSubtitlesUrl,
   getSubtitlesUrl,
   getThumbnailUrl,
@@ -262,24 +263,33 @@ export const copyToDatedAdditionalMedia = async (
 };
 
 /**
- * Extracts a video's embedded subtitle track and attaches it to an already added
- * media item.
+ * Attaches subtitles to an already added local video, from whichever source has
+ * them.
+ *
+ * JW's own published `.vtt` is tried before the track muxed into the file, since
+ * only the published one carries cue placement — the embedded track has none, so
+ * subtitles taken from it sit at the bottom throughout, even where the published
+ * file lifts them clear of a burnt-in caption.
  *
  * Runs after the item is in the store so that adding media stays responsive: the
- * first extraction has to download FFmpeg. Silent when the video turns out to
- * have no usable subtitle track, which is the common case.
+ * lookup goes to the network, and the first extraction has to download FFmpeg.
+ * Silent when neither source has anything, which is the common case.
  *
  * @param filePath The local video file
  * @param uniqueId The uniqueId of the media item to update
  * @param congregation The congregation the item was added under
+ * @param duration The video's own duration, used to reject a wrong match
  */
-const backfillEmbeddedSubtitles = async (
+const backfillLocalSubtitles = async (
   filePath: string,
   uniqueId: string,
   congregation: string,
+  duration?: number,
 ) => {
   try {
-    const subtitlesUrl = await getEmbeddedSubtitlesUrl(filePath);
+    const subtitlesUrl =
+      (await getJwPublishedSubtitlesUrl(filePath, duration)) ||
+      (await getEmbeddedSubtitlesUrl(filePath));
     if (!subtitlesUrl) return;
 
     const jwStore = useJwStore();
@@ -305,7 +315,7 @@ const backfillEmbeddedSubtitles = async (
   } catch (error) {
     errorCatcher(error, {
       contexts: {
-        fn: { filePath, name: 'backfillEmbeddedSubtitles', uniqueId },
+        fn: { filePath, name: 'backfillLocalSubtitles', uniqueId },
       },
     });
   }
@@ -325,6 +335,12 @@ const backfillEmbeddedSubtitles = async (
  * so it cannot be taken apart again). Those are refetched instead — see
  * backfillMissingSubtitles.
  *
+ * A stored URL is trusted only as far as the file behind it: subtitles live in
+ * the cache, the cache is swept, and a URL left pointing at a swept file is
+ * worse than none at all — the player attaches a `<track>` that fails to load,
+ * silently, and the truthy URL kept every path here from ever trying again. So
+ * a URL whose file has gone is treated as no URL.
+ *
  * @param item The stored media item
  * @param congregation The congregation it belongs to
  * @returns Whether a sidecar was found synchronously; extraction continues after
@@ -333,7 +349,12 @@ const resolveSubtitlesForStoredItem = async (
   item: MediaItem,
   congregation: string,
 ) => {
-  if (item.subtitlesUrl || !item.isVideo || !item.fileUrl) return false;
+  if (!item.isVideo || !item.fileUrl) return false;
+  if (item.subtitlesUrl) {
+    const storedPath = fileUrlToPath(item.subtitlesUrl);
+    if (storedPath && (await pathExists(storedPath))) return false;
+    item.subtitlesUrl = '';
+  }
   const filePath = fileUrlToPath(item.fileUrl);
   if (!filePath || !(await pathExists(filePath))) return false;
 
@@ -343,8 +364,14 @@ const resolveSubtitlesForStoredItem = async (
     return true;
   }
 
-  // Not awaited: FFmpeg reads the whole file, which takes minutes for a long one.
-  void backfillEmbeddedSubtitles(filePath, item.uniqueId, congregation);
+  // Not awaited: the published lookup goes to the network, and falling back to
+  // FFmpeg reads the whole file, which takes minutes for a long one.
+  void backfillLocalSubtitles(
+    filePath,
+    item.uniqueId,
+    congregation,
+    item.duration,
+  );
   return false;
 };
 
@@ -367,7 +394,10 @@ export const backfillMissingSubtitles = async (congregation: string) => {
     for (const day of jwStore.lookupPeriod[congregation] ?? []) {
       for (const mediaSection of day.mediaSections ?? []) {
         for (const item of mediaSection.items ?? []) {
-          if (item.subtitlesUrl || !item.isVideo || !item.fileUrl) continue;
+          // Items that already have subtitles are not filtered out here:
+          // resolveSubtitlesForStoredItem checks the file behind the URL and
+          // returns immediately when it is still there.
+          if (!item.isVideo || !item.fileUrl) continue;
           localVideos++;
           await resolveSubtitlesForStoredItem(item, congregation);
         }
@@ -490,12 +520,14 @@ export const addToAdditionMediaMapFromPath = async (
       isCoWeek(currentStateStore.selectedDateObject?.date),
     );
     if (video && !sidecarSubtitlesUrl) {
-      // Not awaited: extracting an embedded track needs FFmpeg, which is
-      // downloaded on first use, and adding media must not stall on that.
-      void backfillEmbeddedSubtitles(
+      // Not awaited: the published lookup goes to the network, and extracting an
+      // embedded track needs FFmpeg, which is downloaded on first use. Adding
+      // media must not stall on either.
+      void backfillLocalSubtitles(
         additionalFilePath,
         uniqueId,
         currentStateStore.currentCongregation,
+        duration,
       );
     }
     return uniqueId;

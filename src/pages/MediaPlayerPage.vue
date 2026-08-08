@@ -207,6 +207,7 @@ import { isAudio, isImage, isVideo } from 'src/utils/media';
 import { useJwStore } from 'stores/jw';
 import {
   computed,
+  nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
@@ -532,6 +533,22 @@ const currentMediaElement: Ref<HTMLAudioElement | HTMLVideoElement | null> =
   computed(() => {
     return mediaElement1.value || mediaElement2.value || null;
   });
+
+// A `<track default>` is only honoured while the browser is picking tracks for
+// the media resource. Subtitles that arrive mid-playback — a published .vtt
+// still downloading, or an FFmpeg extraction that takes minutes — append their
+// track after that point, so it loads but stays disabled and nothing shows
+// until the video is played again. Turning it on explicitly is what makes the
+// track appear the moment it lands, which is the whole point of forwarding it.
+watch([mediaPlayerSubtitlesUrl, subtitlesVisible], async ([url, visible]) => {
+  if (!url || !visible) return;
+  await nextTick();
+  const tracks = currentMediaElement.value?.textTracks;
+  if (!tracks) return;
+  for (const track of tracks) {
+    if (track.mode !== 'showing') track.mode = 'showing';
+  }
+});
 
 const triggerPlay = (force = false) => {
   if (!force && mediaAction.value !== 'play') {
