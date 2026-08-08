@@ -4,7 +4,7 @@ import { watch as filesystemWatch, type FSWatcher } from 'chokidar';
 import { app, dialog } from 'electron';
 import { ensureDir, type Stats } from 'fs-extra';
 import { createWriteStream } from 'node:fs';
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import {
@@ -584,6 +584,35 @@ const processFileEntry = async (
 
   await attemptProcessFile();
 };
+
+/**
+ * Gives a file the executable bit, on the platforms that have one.
+ *
+ * Unzipping does not carry permissions across — yauzl reports an entry's mode
+ * but nothing here applies it, so every extracted file lands as 0644. That is
+ * harmless for publication content, but the FFmpeg binary the app downloads for
+ * itself is extracted the same way and then cannot be spawned at all: subtitle
+ * extraction, media export and video conversion fail with EACCES, and the
+ * failure is swallowed as "no subtitle track found".
+ *
+ * Windows decides executability by extension and has no bit to set, so there is
+ * nothing to do there.
+ *
+ * @param path The file to make executable
+ * @returns Whether the file can be executed afterwards
+ */
+export async function setExecutable(path: string): Promise<boolean> {
+  if (process.platform === 'win32') return true;
+  try {
+    await chmod(path, 0o755);
+    return true;
+  } catch (error) {
+    captureElectronError(error, {
+      contexts: { fn: { name: 'setExecutable', path } },
+    });
+    return false;
+  }
+}
 
 /**
  * Checks that a zip entry resolves inside the extraction directory.

@@ -255,6 +255,14 @@ export interface ElectronApi {
   robot: typeof robot;
   setAutoStartAtLogin: (value: boolean) => void;
   setElectronUrlVariables: (variables: string) => void;
+  /**
+   * Gives a file the executable bit, on the platforms that have one.
+   *
+   * @param path - The file to make executable.
+   * @returns Whether the file can be executed afterwards. Always true on
+   *   Windows, which has no such bit.
+   */
+  setExecutable: (path: string) => Promise<boolean>;
   setHardwareAcceleration: (disabled: boolean) => void;
   setPathProbeNotificationPaths: (paths: string[]) => void;
   toggleMediaWindow: (show: boolean, enableFadeTransitions?: boolean) => void;
@@ -295,6 +303,7 @@ export type ElectronIpcInvokeKey =
   | 'openFolderDialog'
   | 'registerShortcut'
   | 'set-hardware-acceleration'
+  | 'setExecutable'
   | 'unzip';
 
 // BrowserWindow.webContents.send / ipcRenderer.on channels

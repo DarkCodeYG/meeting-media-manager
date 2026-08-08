@@ -141,6 +141,7 @@ const electronApi: ElectronApi = {
   robot,
   setAutoStartAtLogin: (v) => send('toggleOpenAtLogin', v),
   setElectronUrlVariables: (v) => send('setElectronUrlVariables', v),
+  setExecutable: (p) => invoke('setExecutable', p),
   setHardwareAcceleration: (v) => invoke('set-hardware-acceleration', v),
   setPathProbeNotificationPaths: (paths) =>
     send('setPathProbeNotificationPaths', paths),

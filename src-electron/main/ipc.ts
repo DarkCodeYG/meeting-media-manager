@@ -44,6 +44,7 @@ import {
   isUsablePath,
   openFileDialog,
   openFolderDialog,
+  setExecutable,
   setPathProbeNotificationPaths,
   unwatchFolders,
   unzipFile,
@@ -371,6 +372,10 @@ handleIpcInvoke(
   'extractSubtitles',
   async (_e, path: string, ffmpegPath: string, outputDir?: string) =>
     extractSubtitles(path, ffmpegPath, outputDir),
+);
+
+handleIpcInvoke('setExecutable', async (_e, path: string) =>
+  setExecutable(path),
 );
 
 handleIpcInvoke(
