@@ -27,19 +27,31 @@ describe('getLocalFontPath', () => {
     await remove(appDataPath);
   });
 
-  it('reuses the legacy cached JW-Icons font without refetching it', async () => {
+  it('deletes a legacy JW-Icons cache instead of drawing icons with it', async () => {
+    // JW-Icons was never renamed to jw-icons-all; it is a different, smaller
+    // font. Reusing it drew the yeartext logo too large for its box and clipped
+    // the W, and because the file was accepted as a cache hit the correct font
+    // was never fetched.
     const fontsDir = join(appDataPath, 'Fonts');
     await ensureDir(fontsDir);
     const legacyFontPath = join(fontsDir, 'JW-Icons.woff2');
     await writeFile(legacyFontPath, Buffer.from('cached-font'));
 
+    const store = useJwStore();
+    store.urlVariables.base = 'example.org';
+    store.fontUrls['jw-icons-all'] = 'https://example.org/jw-icons-all.woff';
+
     const { fetchRaw } = await import('src/utils/api');
+    vi.mocked(fetchRaw).mockResolvedValue(
+      new Response(Buffer.from('fresh-font')),
+    );
     const { getLocalFontPath } = await import('../fonts');
 
-    await expect(getLocalFontPath('jw-icons-all')).resolves.toBe(
-      legacyFontPath,
-    );
-    expect(fetchRaw).not.toHaveBeenCalled();
+    const resolved = await getLocalFontPath('jw-icons-all');
+
+    expect(resolved).not.toBe(legacyFontPath);
+    await expect(pathExists(legacyFontPath)).resolves.toBe(false);
+    expect(fetchRaw).toHaveBeenCalled();
   });
 
   it('reuses a cached .woff file when no .woff2 cache entry exists', async () => {

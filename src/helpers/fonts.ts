@@ -13,7 +13,7 @@ import { useJwStore } from 'stores/jw';
 import { ref } from 'vue';
 
 const { extname, fs, join } = globalThis.electronApi;
-const { ensureDir, exists, readFile, writeFile } = fs;
+const { ensureDir, exists, readFile, remove, writeFile } = fs;
 
 let jwIconsGlyphMapPromise: null | Promise<void> = null;
 let jwIconsGlyphMap: null | Record<string, string> = null;
@@ -243,10 +243,45 @@ export const loadYeartextFont = async (
 
 const fontFacePromises: Partial<Record<FontName, Promise<boolean>>> = {};
 const localFontPathPromises: Partial<Record<FontName, Promise<string>>> = {};
-const legacyFontFileNames: Partial<Record<FontName, string[]>> = {
+const legacyFontFileNames: Partial<Record<FontName, string[]>> = {};
+const fontExtensions = ['woff2', 'woff'] as const;
+
+/**
+ * File names left behind by earlier versions that must never be read.
+ *
+ * `JW-Icons` was not renamed to `jw-icons-all` — it is a different, smaller font
+ * whose glyphs sit at other code points. Accepting it as a stand-in meant a
+ * folder holding only the old file was used as-is and the correct font was never
+ * downloaded, which draws the yeartext logo too large for its box and clips the
+ * W. Deleting it on sight, rather than in a one-time migration, is what makes
+ * this survive the data folder moving: switching a Windows install between
+ * per-user and machine-wide repoints the app at `C:\ProgramData\...` instead of
+ * `%APPDATA%\...`, and a migration recorded as done never runs against the
+ * folder that is suddenly in use.
+ */
+const staleFontFileNames: Partial<Record<FontName, string[]>> = {
   'jw-icons-all': ['JW-Icons'],
 };
-const fontExtensions = ['woff2', 'woff'] as const;
+
+/** A glyph the real jw-icons font always has, used to tell it from an impostor. */
+const JW_ICONS_SENTINEL_GLYPH = 'jw-square';
+
+const removeStaleFontFiles = async (fontsDir: string, fontName: FontName) => {
+  const staleNames = staleFontFileNames[fontName];
+  if (!staleNames?.length) return;
+  for (const name of staleNames) {
+    for (const extension of fontExtensions) {
+      const stalePath = getFontPath(fontsDir, name, extension);
+      try {
+        if (await exists(stalePath)) await remove(stalePath);
+      } catch (error) {
+        errorCatcher(error, {
+          contexts: { fn: { name: 'removeStaleFontFiles', stalePath } },
+        });
+      }
+    }
+  }
+};
 
 const getFontExtensionFromUrl = (url = '') => {
   if (!url) return 'woff2';
@@ -304,6 +339,28 @@ const buildJwIconsMap = async (fontPath: string) => {
           map[glyph.name] = String.fromCodePoint(codePoint);
         }
       }
+      // A font that parses but lacks the sentinel is not the one this app draws
+      // icons with, whatever its file name says: the static fallback then picks
+      // code points against a font that puts other glyphs there, and the
+      // yeartext logo renders a different shape at a size its box was never cut
+      // for. Deleting it makes the next run fetch the real one.
+      //
+      // Only this case deletes. A parse failure leaves the file alone — fontkit
+      // choking on a format it does not handle would otherwise redownload the
+      // same font on every launch, forever.
+      if (!map[JW_ICONS_SENTINEL_GLYPH]) {
+        errorCatcher(
+          new Error(
+            `jw-icons font has no ${JW_ICONS_SENTINEL_GLYPH} glyph; discarding`,
+          ),
+          { contexts: { fn: { fontPath, name: 'buildJwIconsMap' } } },
+        );
+        await remove(fontPath).catch(() => undefined);
+        jwIconsGlyphMap = fallbackJwIconsGlyphMap;
+        jwIconsGlyphMapVersion.value++;
+        return;
+      }
+
       jwIconsGlyphMap = map;
       jwIconsGlyphMapVersion.value++;
     } catch (error) {
@@ -444,6 +501,10 @@ export const getLocalFontPath = async (fontName: FontName) => {
 
   localFontPathPromises[fontName] = (async () => {
     const fontsDir = await getFontsPath();
+    // Before looking for a usable copy, not after: a stale file left in this
+    // folder would otherwise be found and used, and the correct font never
+    // fetched.
+    await removeStaleFontFiles(fontsDir, fontName);
     const existingFontPath = await getExistingLocalFontPath(fontsDir, fontName);
 
     if (existingFontPath) {
